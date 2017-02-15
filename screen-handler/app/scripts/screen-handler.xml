@@ -1,0 +1,33 @@
+<application>
+    <name>Screen Handler for Posner Paradigm</name>
+
+    <dependencies>
+    </dependencies>
+
+    <module>
+        <name>screen-handler</name>
+        <node>localhost</node>
+    </module>
+    <module>
+        <name>yarpview</name>
+        <node>left-screen</node>
+        <parameters>--name /screenLeft --RefreshTime 33 </parameters>
+    </module>
+    <module>
+        <name>yarpview</name>
+        <node>right-screen</node>
+        <parameters>--name /screenRight --RefreshTime 33 </parameters>
+    </module>
+
+    <connection>
+        <from>/screen-handler/left:o</from>
+        <to>screenLeft</to>
+        <protocol>udp</protocol>
+    </connection>
+    <connection>
+        <from>/screen-handler/right:o</from>
+        <to>screenRight</to>
+        <protocol>udp</protocol>
+    </connection>
+
+</application>

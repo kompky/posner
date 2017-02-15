@@ -1,0 +1,66 @@
+<application>
+    <name>Posner Experiment </name>
+
+    <module>
+        <name>posner-manager</name>
+        <node>localhost</node>
+    </module>
+    <module>
+        <name>faceLandmarks</name>
+        <node>localhost</node>
+    </module>
+    <module>
+        <name>screen-handler</name>
+        <node>localhost</node>
+    </module>
+    <module>
+        <name>iCubBlinker</name>
+        <node>localhost</node>
+    </module>
+    <module>
+        <name>yarpview</name>
+        <node>localhost</node>
+        <parameters>--name /faces --x 0 --y 0 --RefreshTime 33 </parameters>
+    </module>
+    <module>
+        <name>yarpview</name>
+        <node>left-screen</node>
+        <parameters>--name /screenLeft --RefreshTime 33 </parameters>
+    </module>
+    <module>
+        <name>yarpview</name>
+        <node>right-screen</node>
+        <parameters>--name /screenRight --RefreshTime 33 </parameters>
+    </module>
+
+    <connection>
+        <from>/icub/camcalib/left/out</from>
+        <to>/faceLandmarks/image:i</to>
+        <protocol>udp</protocol>
+    </connection>
+    <connection>
+        <from>/faceLandmarks/image:o</from>
+        <to>/faces</to>
+        <protocol>udp</protocol>
+    </connection>
+    <connection>
+        <from>/faceLandmarks/target:o</from>
+        <to>/posner-manager/face:i</to>
+        <protocol>tcp</protocol>
+    </connection>
+    <connection>
+        <from>/posner-manager/handler:o</from>
+        <to>/screen-handler/combination:i</to>
+        <protocol>tcp</protocol>
+    </connection>
+    <connection>
+        <from>/screen-handler/left:o</from>
+        <to>screenLeft</to>
+        <protocol>udp</protocol>
+    </connection>
+    <connection>
+        <from>/screen-handler/right:o</from>
+        <to>screenRight</to>
+        <protocol>udp</protocol>
+    </connection>
+</application>

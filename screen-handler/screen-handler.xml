@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<?xml-stylesheet type="text/xsl" href="yarpmanifest.xsl"?>
+
+<module>
+  <name>screen-handler</name>
+  <doxygen-group></doxygen-group>
+  <description>Find wally in an image using a template</description>
+  <copypolicy>Released under the terms of the GNU GPL v2.0</copypolicy>
+  <version>1.0</version>
+
+  <description-long>
+    This module allows the user to load an image and detect the required template using various
+    template tracking methods.
+
+    To use the module do the following:
+    - Load and image with the dedicated rpc command
+    - Once the image is loaded, the user can select to use a template track method on a particular template (rpc)
+    - the position of the tracked template is then accessible via a dedicaded command.
+
+</description-long>
+
+  <arguments>
+    <param default="find-wally" desc="select the current context.">context</param>
+    <param default="config.ini" desc="configuration file name.">from</param>
+  </arguments>
+
+  <authors>
+    <author email="vadim.tikhanoff@iit.it"> Vadim Tikhanoff </author>
+  </authors>
+
+  <data>
+    <output>
+      <type>yarp::sig::Image</type>
+      <port carrier="udp">/find-wally/image:o</port>
+      <description>
+        streams out the user image with results of tracking.
+      </description>
+    </output>
+  </data>
+
+  <services>
+    <server>
+      <type>findWally_IDL</type>
+      <idl>find-wally.thrift</idl>
+      <port>/find-wally/rpc</port>
+      <description>service port</description>
+    </server>
+  </services>
+
+</module>
