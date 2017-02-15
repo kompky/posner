@@ -36,6 +36,69 @@ using namespace yarp::dev;
 using namespace yarp::sig;
 using namespace yarp::math;
 
+/********************************************************/
+class ProcessLandmarks : public yarp::os::BufferedPort<yarp::os::Bottle>
+{
+    std::string moduleName;
+    
+public:
+    /********************************************************/
+    
+    ProcessLandmarks( const std::string &moduleName )
+    {
+        this->moduleName = moduleName;
+    }
+    
+    /********************************************************/
+    ~ProcessLandmarks()
+    {
+        
+    };
+    
+    /********************************************************/
+    bool open()
+    {
+     
+        this->useCallback();
+        
+        BufferedPort<yarp::os::Bottle>::open( "/" + moduleName + "/landmarks:i" );
+        
+        return true;
+    }
+    
+    /********************************************************/
+    void close()
+    {
+        BufferedPort<yarp::os::Bottle> ::close();
+    }
+
+    /********************************************************/
+    void interrupt()
+    {
+        BufferedPort<yarp::os::Bottle>::interrupt();
+    }
+    
+    /********************************************************/
+    void onRead( yarp::os::Bottle &landmarks )
+    {
+        
+        if (landmarks.size() > 0)
+        {
+            //yDebug("Got something with size %d and elements  %d", landmarks.size(), landmarks.get(0).asList()->size());
+            
+            int rightEyeX = landmarks.get(0).asList()->get(84).asInt() + ((landmarks.get(0).asList()->get(90).asInt()) - landmarks.get(0).asList()->get(84).asInt());
+            int rightEyeY = landmarks.get(0).asList()->get(85).asInt() + ((landmarks.get(0).asList()->get(91).asInt()) - landmarks.get(0).asList()->get(85).asInt());
+            
+            int leftEyeX = landmarks.get(0).asList()->get(72).asInt() + ((landmarks.get(0).asList()->get(78).asInt()) - landmarks.get(0).asList()->get(72).asInt());
+            int leftEyeY = landmarks.get(0).asList()->get(75).asInt() + ((landmarks.get(0).asList()->get(81).asInt()) - landmarks.get(0).asList()->get(75).asInt());
+          
+            yDebug("RIGHT EYE X:%d Y:%d LEFT EYE X:%d Y:%d", rightEyeX, rightEyeY, leftEyeX, leftEyeY);
+        }
+    }
+    
+};
+
+/********************************************************/
 
 class CtrlThread: public RateThread,
                   public GazeEvent
@@ -293,27 +356,44 @@ class CtrlModule: public RFModule
 {
 protected:
     CtrlThread *thr;
-
+    
+    ProcessLandmarks           *processLandmarks;
+    friend class                processLandmarks;
+    
 public:
     virtual bool configure(ResourceFinder &rf)
     {
         Time::turboBoost();
+        
+        std::string moduleName = rf.check("name", yarp::os::Value("posner-manager"), "module name (string)").asString();
+        setName(moduleName.c_str());
 
-        thr=new CtrlThread(CTRL_THREAD_PER);
+        /*thr=new CtrlThread(CTRL_THREAD_PER);
         if (!thr->start())
         {
             delete thr;
             return false;
         }
+         */
+        
+        processLandmarks = new ProcessLandmarks( moduleName );
+        
+        /* now start the thread to do the work */
+        processLandmarks->open();
+        
 
         return true;
     }
 
     virtual bool close()
     {
-        thr->stop();
-        delete thr;
+        //thr->stop();
+        //delete thr;
 
+        processLandmarks->interrupt();
+        processLandmarks->close();
+        delete processLandmarks;
+        
         return true;
     }
 
@@ -335,5 +415,11 @@ int main(int argc, char *argv[])
     CtrlModule mod;
 
     ResourceFinder rf;
+    
+    rf.setVerbose();
+    rf.configure(argc,argv);
+    rf.setDefaultContext( "posner-manager" );
+    rf.setDefaultConfigFile( "config.ini" );
+    
     return mod.runModule(rf);
 }

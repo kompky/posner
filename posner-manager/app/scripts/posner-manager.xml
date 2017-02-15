@@ -44,8 +44,8 @@
         <protocol>udp</protocol>
     </connection>
     <connection>
-        <from>/faceLandmarks/target:o</from>
-        <to>/posner-manager/face:i</to>
+        <from>/faceLandmarks/landmarks:o</from>
+        <to> /posner-manager/landmarks:i</to>
         <protocol>tcp</protocol>
     </connection>
     <connection>
