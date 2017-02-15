@@ -40,6 +40,11 @@ using namespace yarp::math;
 class ProcessLandmarks : public yarp::os::BufferedPort<yarp::os::Bottle>
 {
     std::string moduleName;
+    int rightEyeX, rightEyeY;
+    int leftEyeX, leftEyeY;
+    
+    yarp::os::Mutex mutex;
+    
     
 public:
     /********************************************************/
@@ -58,13 +63,31 @@ public:
     /********************************************************/
     bool open()
     {
-     
         this->useCallback();
         
         BufferedPort<yarp::os::Bottle>::open( "/" + moduleName + "/landmarks:i" );
         
+        rightEyeX = rightEyeY = leftEyeX = leftEyeY = 0;
+        
         return true;
     }
+    /********************************************************/
+    yarp::os::Bottle getEyes()
+    {
+        mutex.lock();
+        yarp::os::Bottle eyes;
+        
+        eyes.addInt(rightEyeX);
+        eyes.addInt(rightEyeY);
+        eyes.addInt(leftEyeX);
+        eyes.addInt(leftEyeY);
+        
+        yDebug("EYES %s", eyes.toString().c_str());
+        mutex.unlock();
+        
+        return eyes;
+    }
+    
     
     /********************************************************/
     void close()
@@ -86,16 +109,16 @@ public:
         {
             //yDebug("Got something with size %d and elements  %d", landmarks.size(), landmarks.get(0).asList()->size());
             
-            int rightEyeX = landmarks.get(0).asList()->get(84).asInt() + ((landmarks.get(0).asList()->get(90).asInt()) - landmarks.get(0).asList()->get(84).asInt());
-            int rightEyeY = landmarks.get(0).asList()->get(85).asInt() + ((landmarks.get(0).asList()->get(91).asInt()) - landmarks.get(0).asList()->get(85).asInt());
+            mutex.lock();
+            rightEyeX = landmarks.get(0).asList()->get(84).asInt() + ((landmarks.get(0).asList()->get(90).asInt()) - landmarks.get(0).asList()->get(84).asInt());
+            rightEyeY = landmarks.get(0).asList()->get(85).asInt() + ((landmarks.get(0).asList()->get(91).asInt()) - landmarks.get(0).asList()->get(85).asInt());
             
-            int leftEyeX = landmarks.get(0).asList()->get(72).asInt() + ((landmarks.get(0).asList()->get(78).asInt()) - landmarks.get(0).asList()->get(72).asInt());
-            int leftEyeY = landmarks.get(0).asList()->get(75).asInt() + ((landmarks.get(0).asList()->get(81).asInt()) - landmarks.get(0).asList()->get(75).asInt());
-          
-            yDebug("RIGHT EYE X:%d Y:%d LEFT EYE X:%d Y:%d", rightEyeX, rightEyeY, leftEyeX, leftEyeY);
+            leftEyeX = landmarks.get(0).asList()->get(72).asInt() + ((landmarks.get(0).asList()->get(78).asInt()) - landmarks.get(0).asList()->get(72).asInt());
+            leftEyeY = landmarks.get(0).asList()->get(75).asInt() + ((landmarks.get(0).asList()->get(81).asInt()) - landmarks.get(0).asList()->get(75).asInt());
+            mutex.unlock();
+            
         }
     }
-    
 };
 
 /********************************************************/
@@ -147,6 +170,7 @@ protected:
 
         // switch state
         state=STATE_STILL;
+        
     }
 
 public:
@@ -296,6 +320,11 @@ public:
         clientGaze.close();
         clientTorso.close();
     }
+    
+    void getUserEyes()
+    {
+        
+    }
 
     void generateTarget()
     {
@@ -356,6 +385,7 @@ class CtrlModule: public RFModule
 {
 protected:
     CtrlThread *thr;
+    friend class                thr;
     
     ProcessLandmarks           *processLandmarks;
     friend class                processLandmarks;
