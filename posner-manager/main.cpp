@@ -1,6 +1,19 @@
-// -*- mode:C++; tab-width:4; c-basic-offset:4; indent-tabs-mode:nil -*-
-//
-// A tutorial on how to use the Gaze Interface.
+/*
+ * Copyright (C) 2016 iCub Facility - Istituto Italiano di Tecnologia
+ * Author: Vadim Tikhanoff
+ * email:  vadim.tikhanoff@iit.it
+ * Permission is granted to copy, distribute, and/or modify this program
+ * under the terms of the GNU General Public License, version 2 or any
+ * later version published by the Free Software Foundation.
+ *
+ * A copy of the license can be found at
+ * http://www.robotcub.org/icub/license/gpl.txt
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
+ * Public License for more details
+ */
 
 #include <yarp/os/Network.h>
 #include <yarp/os/RFModule.h>
@@ -8,6 +21,8 @@
 #include <yarp/os/Time.h>
 #include <yarp/sig/Vector.h>
 #include <yarp/math/Math.h>
+#include <yarp/os/Log.h>
+#include <yarp/os/LogStream.h>
 
 #include <yarp/dev/Drivers.h>
 #include <yarp/dev/ControlBoardInterfaces.h>
@@ -48,7 +63,6 @@ class ProcessLandmarks : public yarp::os::BufferedPort<yarp::os::Bottle>
     
 public:
     /********************************************************/
-    
     ProcessLandmarks( const std::string &moduleName )
     {
         this->moduleName = moduleName;
@@ -120,16 +134,15 @@ public:
 };
 
 /********************************************************/
-
 class CtrlThread: public RateThread,
                   public GazeEvent
 {
 protected:
     PolyDriver        clientGaze;
     PolyDriver        clientTorso;
-    IGazeControl     *igaze;
-    IEncoders        *ienc;
-    IPositionControl *ipos;
+    IGazeControl      *igaze;
+    IEncoders         *ienc;
+    IPositionControl  *ipos;
 
     int state;
     int startup_context_id;
@@ -147,7 +160,7 @@ protected:
     double t3;
     double t4;
 
-    // the motion-done callback
+    /********************************************************/
     virtual void gazeEventCallback()
     {
         Vector ang;
@@ -170,18 +183,18 @@ protected:
 
         // switch state
         state=STATE_STILL;
-        
     }
 
 public:
-    CtrlThread(const double period, ProcessLandmarks &proc) : RateThread(int(period*5000.0)), process(proc)
+    /********************************************************/
+    CtrlThread(const double period, ProcessLandmarks &proc) : RateThread(int(period*1000.0)), process(proc)
     {
-        
         // here we specify that the event we are interested in is
         // of type "motion-done"
         gazeEventParameters.type="motion-done";
     }
 
+    /********************************************************/
     virtual bool threadInit()
     {
         // open a client interface to connect to the gaze server
@@ -198,38 +211,38 @@ public:
 
         // open the view
         clientGaze.view(igaze);
-
+        
         // latch the controller context in order to preserve
         // it after closing the module
         // the context contains the tracking mode, the neck limits and so on.
         igaze->storeContext(&startup_context_id);
-
+        
         // set trajectory time:
         igaze->setNeckTrajTime(0.8);
         igaze->setEyesTrajTime(0.4);
-
+        
         // put the gaze in tracking mode, so that
         // when the torso moves, the gaze controller
         // will compensate for it
         igaze->setTrackingMode(true);
-
+        
         // print out some info about the controller
         Bottle info;
         igaze->getInfo(info);
         fprintf(stdout,"info = %s\n",info.toString().c_str());
-
+        
         Property optTorso("(device remote_controlboard)");
         optTorso.put("remote","/icubSim/torso");
         optTorso.put("local","/torso_client");
-
+        
         if (!clientTorso.open(optTorso))
             return false;
-
+        
         // open the view
         clientTorso.view(ienc);
         clientTorso.view(ipos);
         ipos->setRefSpeed(0,10.0);
-
+        
         fp.resize(3);
 
         state=STATE_TRACK;
@@ -239,6 +252,7 @@ public:
         return true;
     }
 
+    /********************************************************/
     virtual void afterStart(bool s)
     {
         if (s)
@@ -247,13 +261,15 @@ public:
             fprintf(stdout,"Thread did not start\n");
     }
 
+    /********************************************************/
     virtual void run()
     {
+        yDebug("dbg");
         t=Time::now();
 
         generateTarget();
         
-        Bottle eyes = process.getEyes();
+        //Bottle eyes = process.getEyes();
 
         if (state==STATE_TRACK)
         {
@@ -310,6 +326,7 @@ public:
         }
     }
 
+    /********************************************************/
     virtual void threadRelease()
     {
         // we require an immediate stop
@@ -324,11 +341,13 @@ public:
         clientTorso.close();
     }
     
+    /********************************************************/
     void getUserEyes()
     {
         
     }
 
+    /********************************************************/
     void generateTarget()
     {
         // translational target part: a circular trajectory
@@ -339,6 +358,7 @@ public:
         fp[2]=+0.3+0.1*sin(2.0*M_PI*0.1*(t-t0));
     }
 
+    /********************************************************/
     void storeInterestingPoint()
     {
         if (t-t3>=STORE_POI_PER)
@@ -362,6 +382,7 @@ public:
         }
     }
 
+    /********************************************************/
     void printStatus()
     {
         if (t-t1>=PRINT_STATUS_PER)
@@ -382,8 +403,7 @@ public:
     }
 };
 
-
-
+/********************************************************/
 class CtrlModule: public RFModule
 {
 protected:
@@ -398,16 +418,21 @@ public:
     {
         Time::turboBoost();
         
+        yDebug("dgb1") ;
         std::string moduleName = rf.check("name", yarp::os::Value("posner-manager"), "module name (string)").asString();
         setName(moduleName.c_str());
 
+        yDebug("starting process")  ;
         processLandmarks = new ProcessLandmarks( moduleName );
         processLandmarks->open();
         
+        yDebug("new control thread");
         thr=new CtrlThread(CTRL_THREAD_PER, *processLandmarks);
         
+        yDebug("started") ;
         if (!thr->start())
         {
+            yDebug("error" );
             delete thr;
             processLandmarks->interrupt();
             processLandmarks->close();
@@ -415,9 +440,11 @@ public:
             return false;
         }
         
+        yDebug("dgb configure done") ;
         return true;
     }
-
+    
+    /********************************************************/
     virtual bool close()
     {
         thr->stop();
@@ -430,12 +457,14 @@ public:
         return true;
     }
 
+    /********************************************************/
     virtual double getPeriod()    { return 1.0;  }
+    
+    /********************************************************/
     virtual bool   updateModule() { return true; }
 };
 
-
-
+/********************************************************/
 int main(int argc, char *argv[])
 {
     Network yarp;
