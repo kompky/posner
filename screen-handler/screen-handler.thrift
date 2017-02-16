@@ -4,16 +4,10 @@
 #
 # screen-handler.thrift
 
-struct Bottle{}
-(
-    yarp.name = "yarp::os::Bottle"
-    yarp.includefile="yarp/os/Bottle.h"
-)
-
 /**
 * screenHandler_IDL
 *
-* IDL Interface to \ref Find Wally Module.
+* IDL Interface to \ref handle the screen.
 */
 service screenHandler_IDL
 {
@@ -23,23 +17,24 @@ service screenHandler_IDL
      * @param mainImage name of the image to be loaded.
      * @return true/false on success/failure.
      */
-    bool load(1:string image);
+    bool load(1:string firstImage, 2:string secondImage);
 
     /**
-     * use template matching on image with desired template and desired method
-     * @param template name of the image to be loaded.
-     * @param name of method: 0=SQDIFF, 1=SQDIFF NORMED, 2=TM CCORR, 3=TM CCORR NORMED, 4=TM COEFF, 5=TM COEFF NORMED
-     * @return Bottle containing the 2D position.
+     * Displays the required image on the required display
+     * @param string containing the location of the display - left or right
+     * @param name image to send
+     * @return true/false on success/failure.
      *
      */
-    Bottle templateMatch(1:string image, 2:i32 method);
-
+    bool display(1:string location, 2:string image);
+    
     /**
-     * Gets the location of wally in the 2D image.
-     * @return Bottle containing the 2D position.
+     * Resets the images that are sent through the ports to black
+     * @return true/false on success/failure.
+     *
      */
-    Bottle getLocation();
-
+    bool resetImages();
+    
     /**
      * Quit the module.
      * @return true/false on success/failure

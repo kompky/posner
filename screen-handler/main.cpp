@@ -35,17 +35,23 @@ class Finder : public yarp::os::RFModule,
 {
     yarp::os::ResourceFinder *rf;
     yarp::os::RpcServer rpcPort;
-    yarp::os::BufferedPort<yarp::sig::ImageOf<yarp::sig::PixelRgb> >    imageOutPort;
+    yarp::os::BufferedPort<yarp::sig::ImageOf<yarp::sig::PixelRgb> >    imageOutPortLeft;
+    yarp::os::BufferedPort<yarp::sig::ImageOf<yarp::sig::PixelRgb> >    imageOutPortRight;
 
     std::string outImgPortName;
 
     yarp::os::Mutex mutex;
 
-    cv::Mat inputImage;
-    cv::Mat templateImage;
-    cv::Mat out_image;
+    cv::Mat firstImage;
+    cv::Mat secondImage;
+    cv::Mat blackImage;
+    
+    std::string location;
+    std::string imageName;
+    std::string firstImg;
+    std::string secondImg;
 
-    double x_pos, y_pos;
+    bool askedToDisplay;
 
     bool closing;
 
@@ -56,27 +62,30 @@ class Finder : public yarp::os::RFModule,
     }
 
     /********************************************************/
-    bool load(const std::string &image)
+    bool load(const std::string &firstImageStr, const std::string &secondImageStr)
     {
         mutex.lock();
         yarp::os::ResourceFinder rf;
         rf.setVerbose();
         rf.setDefaultContext(this->rf->getContext().c_str());
 
-        std::string imageStr = rf.findFile(image.c_str());
+        std::string imageOneStr = rf.findFile(firstImageStr.c_str());
+        std::string imageTwoStr = rf.findFile(secondImageStr.c_str());
 
-        yDebug() << "image path is:" << imageStr;
+        yDebug() << "image path is:" << imageOneStr;
+        yDebug() << "image path is:" << imageTwoStr;
+        firstImg  = firstImageStr;
+        secondImg = secondImageStr;
 
-        inputImage = cv::imread(imageStr, CV_LOAD_IMAGE_COLOR);
-        if(! inputImage.data )
+        firstImage = cv::imread(imageOneStr, CV_LOAD_IMAGE_COLOR);
+        secondImage = cv::imread(imageTwoStr, CV_LOAD_IMAGE_COLOR);
+        
+        if(! firstImage.data || ! secondImage.data)
         {
-            yError() <<"Could not open or find the first image " << imageStr;
+            yError() <<"Could not open or find one or both imaged ";
             mutex.unlock();
             return false;
         }
-
-        x_pos = -1.0;
-        y_pos = -1.0;
 
         mutex.unlock();
 
@@ -84,85 +93,44 @@ class Finder : public yarp::os::RFModule,
     }
 
     /********************************************************/
-    yarp::os::Bottle templateMatch (const std::string &image, const int method)
+    bool display(const std::string &location, const std::string &imageName)
     {
-        yarp::os::Bottle pos;
-
+        bool returnValue = true;
         mutex.lock();
-        yarp::os::ResourceFinder rf;
-        rf.setVerbose();
-        rf.setDefaultContext(this->rf->getContext().c_str());
-        std::string imageStr = rf.findFile(image.c_str());
-
-        yDebug() << "image path is:" << imageStr;
-
-        templateImage = cv::imread(imageStr, CV_LOAD_IMAGE_COLOR);
-
-        if(! templateImage.data || ! inputImage.data || method < 0 || method > 5 )
+        
+        if(! firstImage.data || ! secondImage.data)
         {
-            yError("Either there is no main image, the template is invalid or the method requested is wrong");
-            x_pos = -1.0;
-            y_pos = -1.0;
-            pos.addDouble(x_pos);
-            pos.addDouble(y_pos);
+            yError() <<"Please load images first";
+            mutex.unlock();
+            return false;
         }
+        
+        if(strcmp (location.c_str(), "left")==0 || strcmp (location.c_str(), "right")==0)
+            this->location = location;
         else
-        {
-            cv::Mat result;
-            int result_cols =  inputImage.cols - templateImage.cols + 1;
-            int result_rows = inputImage.rows - templateImage.rows + 1;
-
-            //create the resulting image in grayscale
-            result.create( result_rows, result_cols, CV_32FC1 );
-
-            //Check requested template tracking method and call function
-            if (method == cv::TM_SQDIFF || method == cv::TM_CCORR_NORMED)
-            {
-                cv::Mat mask;
-                matchTemplate( inputImage, templateImage, result, method, mask);
-            }
-            else
-                matchTemplate( inputImage, templateImage, result, method);
-
-            //Normalizes the norm
-            normalize( result, result, 0, 1, cv::NORM_MINMAX, -1, cv::Mat() );
-
-            double minVal; double maxVal; cv::Point minLoc; cv::Point maxLoc;
-            cv::Point matchLoc;
-
-            //Find minimum value and maximum value and get the location in 2D point
-            minMaxLoc( result, &minVal, &maxVal, &minLoc, &maxLoc, cv::Mat() );
-
-            if( method  == cv::TM_SQDIFF || method == cv::TM_SQDIFF_NORMED )
-            {
-                matchLoc = minLoc;
-            }
-            else
-                matchLoc = maxLoc;
-
-            //Use the previous location to fill in the bottle
-            x_pos = matchLoc.x;
-            y_pos = matchLoc.y;
-            pos.addDouble(x_pos);
-            pos.addDouble(y_pos);
-        }
-
+            returnValue = false;
+        
+        if(strcmp (imageName.c_str(), firstImg.c_str())==0 || strcmp (imageName.c_str(), secondImg.c_str())==0)
+            this->imageName = imageName;
+        else
+            returnValue = false;
+        
         mutex.unlock();
+        
+        if (returnValue)
+            askedToDisplay = true;
 
-        return pos;
+        return returnValue;
     }
-
+    
     /********************************************************/
-    yarp::os::Bottle getLocation()
+    bool resetImages()
     {
         mutex.lock();
-        yarp::os::Bottle position;
-        position.clear();
-        position.addDouble(x_pos);
-        position.addDouble(y_pos);
+        askedToDisplay = false;
         mutex.unlock();
-
-        return position;
+        
+        return true;
     }
 
     /********************************************************/
@@ -178,14 +146,12 @@ class Finder : public yarp::os::RFModule,
     {
         this->rf=&rf;
 
-        std::string moduleName = rf.check("name", yarp::os::Value("find-wally"), "module name (string)").asString();
+        std::string moduleName = rf.check("name", yarp::os::Value("screen-handler"), "module name (string)").asString();
         setName(moduleName.c_str());
 
         rpcPort.open(("/"+getName("/rpc")).c_str());
-        imageOutPort.open(("/"+getName("/image:o")).c_str());
-
-        y_pos = -1.0;
-        x_pos = -1.0;
+        imageOutPortLeft.open(("/"+getName("/imageLeft:o")).c_str());
+        imageOutPortRight.open(("/"+getName("/imageRight:o")).c_str());
 
         closing = false;
 
@@ -198,7 +164,8 @@ class Finder : public yarp::os::RFModule,
     {
         mutex.lock();
         rpcPort.close();
-        imageOutPort.close();
+        imageOutPortLeft.close();
+        imageOutPortRight.close();
         mutex.unlock();
 
         return true;
@@ -213,41 +180,49 @@ class Finder : public yarp::os::RFModule,
     /********************************************************/
     bool updateModule()
     {
-        mutex.lock();
-        yarp::sig::ImageOf<yarp::sig::PixelRgb> &outImg  = imageOutPort.prepare();
-
-        if( inputImage.data)
+        
+        yarp::sig::ImageOf<yarp::sig::PixelRgb> &outImgLeft  = imageOutPortLeft.prepare();
+        yarp::sig::ImageOf<yarp::sig::PixelRgb> &outImgRight  = imageOutPortRight.prepare();
+        
+        if( firstImage.data && secondImage.data)
         {
-            out_image = inputImage.clone();
-
-            if (x_pos > 0.0 && y_pos > 0.0)
+            cv::Mat leftImage( firstImage.size(), CV_8UC3, cv::Scalar(0,0,0));
+            cv::Mat rightImage(firstImage.size(), CV_8UC3, cv::Scalar(0,0,0));
+            
+            mutex.lock();
+            
+            if (askedToDisplay)
             {
-                //blur image
-                cv::blur( out_image, out_image, cv::Size(10,10));
-                //reduce contrast
-                out_image.convertTo(out_image, CV_8U, 0.5, 0);
-
-                //get ROI
-                cv::Rect roi = cv::Rect(x_pos, y_pos, templateImage.cols, templateImage.rows);
-
-                cv::Mat input_roi = inputImage(roi);
-                //Apply on image
-
-    input_roi.copyTo(out_image(cv::Rect(x_pos,y_pos, input_roi.cols,
-                                     input_roi.rows)));
-
-                cv::rectangle(out_image, cv::Point(x_pos, y_pos), cv::Point(x_pos + templateImage.cols, y_pos + templateImage.rows), cv::Scalar(0, 255, 0), 4);
+                if (strcmp (location.c_str(), "left")==0)
+                {
+                    if (strcmp (imageName.c_str(), firstImg.c_str())==0)
+                        leftImage = firstImage;
+                    else
+                        leftImage = secondImage;
+                }
+                else
+                {
+                    if (strcmp (imageName.c_str(), firstImg.c_str())==0)
+                        rightImage = firstImage;
+                    else
+                        rightImage = secondImage;
+                }
             }
+            
+            mutex.unlock();
 
-            cvtColor(out_image, out_image, CV_BGR2RGB);
+            IplImage yarpImgLeft = leftImage;
+            outImgLeft.resize(yarpImgLeft.width, yarpImgLeft.height);
+            cvCopy( &yarpImgLeft, (IplImage *) outImgLeft.getIplImage());
+            
+            IplImage yarpImgRight = rightImage;
+            outImgRight.resize(yarpImgRight.width, yarpImgRight.height);
+            cvCopy( &yarpImgRight, (IplImage *) outImgRight.getIplImage());
 
-            IplImage yarpImg = out_image;
-            outImg.resize(yarpImg.width, yarpImg.height);
-            cvCopy( &yarpImg, (IplImage *) outImg.getIplImage());
-
-            imageOutPort.write();
+            imageOutPortLeft.write();
+            imageOutPortRight.write();
+            
         }
-        mutex.unlock();
 
         return !closing;
     }

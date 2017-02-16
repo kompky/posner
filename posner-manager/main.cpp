@@ -107,8 +107,6 @@ public:
         
         if (landmarks.size() > 0)
         {
-            //yDebug("Got something with size %d and elements  %d", landmarks.size(), landmarks.get(0).asList()->size());
-            
             mutex.lock();
             rightEyeX = landmarks.get(0).asList()->get(84).asInt() + ((landmarks.get(0).asList()->get(90).asInt()) - landmarks.get(0).asList()->get(84).asInt());
             rightEyeY = landmarks.get(0).asList()->get(85).asInt() + ((landmarks.get(0).asList()->get(91).asInt()) - landmarks.get(0).asList()->get(85).asInt());

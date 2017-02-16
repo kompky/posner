@@ -54,13 +54,13 @@
         <protocol>tcp</protocol>
     </connection>
     <connection>
-        <from>/screen-handler/left:o</from>
-        <to>screenLeft</to>
+        <from>/screen-handler/imageLeft:o</from>
+        <to>/screenLeft</to>
         <protocol>udp</protocol>
     </connection>
     <connection>
-        <from>/screen-handler/right:o</from>
-        <to>screenRight</to>
+        <from>/screen-handler/imageRight:o</from>
+        <to>/screenRight</to>
         <protocol>udp</protocol>
     </connection>
 </application>
