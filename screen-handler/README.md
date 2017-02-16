@@ -10,6 +10,6 @@ During the **Posner Paradigm experiment**, the selection is done **automatically
 Here are the letters in Black Times New Roman Serif Font Typeface to be displayed:
 
 <img src="app/conf/letterF.jpg" width="50">
-<img src="app/conf/letterF.jpg" width="50">
+<img src="app/conf/letterT.jpg" width="50">
 
 ps: please note that the images displayed here are resized for space restrictions
