@@ -1,4 +1,4 @@
-Screen-Handler for the Posner Paradigm Project
+Manager for the Posner Paradigm Project
 ==========================
 
 more info to come soon...
