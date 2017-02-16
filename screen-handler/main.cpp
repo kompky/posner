@@ -22,6 +22,7 @@
 #include <yarp/os/Log.h>
 #include <yarp/os/LogStream.h>
 #include <yarp/os/Mutex.h>
+#include <yarp/os/Time.h>
 #include <yarp/sig/Image.h>
 
 #include <opencv2/core/core.hpp>
@@ -174,13 +175,12 @@ class Finder : public yarp::os::RFModule,
     /********************************************************/
     double getPeriod()
     {
-        return 1.0;
+        return 1.0/30.0;
     }
 
     /********************************************************/
     bool updateModule()
     {
-        
         yarp::sig::ImageOf<yarp::sig::PixelRgb> &outImgLeft  = imageOutPortLeft.prepare();
         yarp::sig::ImageOf<yarp::sig::PixelRgb> &outImgRight  = imageOutPortRight.prepare();
         

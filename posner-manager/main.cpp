@@ -137,6 +137,8 @@ protected:
     Vector fp;
 
     deque<Vector> poiList;
+    
+    ProcessLandmarks &process;
 
     double t;
     double t0;
@@ -172,8 +174,9 @@ protected:
     }
 
 public:
-    CtrlThread(const double period) : RateThread(int(period*5000.0))
+    CtrlThread(const double period, ProcessLandmarks &proc) : RateThread(int(period*5000.0)), process(proc)
     {
+        
         // here we specify that the event we are interested in is
         // of type "motion-done"
         gazeEventParameters.type="motion-done";
@@ -249,6 +252,8 @@ public:
         t=Time::now();
 
         generateTarget();
+        
+        Bottle eyes = process.getEyes();
 
         if (state==STATE_TRACK)
         {
@@ -396,27 +401,27 @@ public:
         std::string moduleName = rf.check("name", yarp::os::Value("posner-manager"), "module name (string)").asString();
         setName(moduleName.c_str());
 
-        /*thr=new CtrlThread(CTRL_THREAD_PER);
+        processLandmarks = new ProcessLandmarks( moduleName );
+        processLandmarks->open();
+        
+        thr=new CtrlThread(CTRL_THREAD_PER, *processLandmarks);
+        
         if (!thr->start())
         {
             delete thr;
+            processLandmarks->interrupt();
+            processLandmarks->close();
+            delete processLandmarks;
             return false;
         }
-         */
         
-        processLandmarks = new ProcessLandmarks( moduleName );
-        
-        /* now start the thread to do the work */
-        processLandmarks->open();
-        
-
         return true;
     }
 
     virtual bool close()
     {
-        //thr->stop();
-        //delete thr;
+        thr->stop();
+        delete thr;
 
         processLandmarks->interrupt();
         processLandmarks->close();
