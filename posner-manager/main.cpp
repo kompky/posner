@@ -212,18 +212,12 @@ public:
         // open the view
         clientGaze.view(igaze);
         
-        // latch the controller context in order to preserve
-        // it after closing the module
-        // the context contains the tracking mode, the neck limits and so on.
         igaze->storeContext(&startup_context_id);
         
         // set trajectory time:
         igaze->setNeckTrajTime(0.8);
         igaze->setEyesTrajTime(0.4);
         
-        // put the gaze in tracking mode, so that
-        // when the torso moves, the gaze controller
-        // will compensate for it
         igaze->setTrackingMode(true);
         
         // print out some info about the controller
@@ -328,12 +322,8 @@ public:
     /********************************************************/
     virtual void threadRelease()
     {
-        // we require an immediate stop
-        // before closing the client for safety reason
         igaze->stopControl();
 
-        // it's a good rule to restore the controller
-        // context as it was before opening the module
         igaze->restoreContext(startup_context_id);
 
         clientGaze.close();
@@ -349,9 +339,8 @@ public:
     /********************************************************/
     void generateTarget()
     {
-        // translational target part: a circular trajectory
-        // in the yz plane centered in [-0.5,0.0,0.3] with radius=0.1 m
-        // and frequency 0.1 Hz
+        // Here find a way to randomly select which screen to look at etc ...
+
         fp[0]=-0.5;
         fp[1]=+0.0+0.1*cos(2.0*M_PI*0.1*(t-t0));
         fp[2]=+0.3+0.1*sin(2.0*M_PI*0.1*(t-t0));
@@ -417,21 +406,20 @@ public:
     {
         Time::turboBoost();
         
-        yDebug("dgb1") ;
         std::string moduleName = rf.check("name", yarp::os::Value("posner-manager"), "module name (string)").asString();
+        
+        yarp::os::Bottle *restPos = rf.findGroup("head-positions").find("rest_position").asList();
+        
+        
         setName(moduleName.c_str());
 
-        yDebug("starting process")  ;
         processLandmarks = new ProcessLandmarks( moduleName );
         processLandmarks->open();
         
-        yDebug("new control thread");
         thr=new CtrlThread(CTRL_THREAD_PER, *processLandmarks);
         
-        yDebug("started") ;
         if (!thr->start())
         {
-            yDebug("error" );
             delete thr;
             processLandmarks->interrupt();
             processLandmarks->close();
@@ -439,7 +427,6 @@ public:
             return false;
         }
         
-        yDebug("dgb configure done") ;
         return true;
     }
     
@@ -479,8 +466,9 @@ int main(int argc, char *argv[])
     
     rf.setVerbose();
     rf.configure(argc,argv);
-    rf.setDefaultContext( "posner-manager" );
-    rf.setDefaultConfigFile( "config.ini" );
+    rf.setDefaultContext("posner-manager");
+    rf.setDefaultConfigFile("config.ini");
+    rf.configure(argc, argv);
     
     return mod.runModule(rf);
 }
