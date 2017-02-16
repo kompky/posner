@@ -264,7 +264,6 @@ public:
     /********************************************************/
     virtual void run()
     {
-        yDebug("dbg");
         t=Time::now();
 
         generateTarget();
