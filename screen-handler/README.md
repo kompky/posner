@@ -9,10 +9,7 @@ During the **Posner Paradigm experiment**, the selection is done **automatically
 
 Here are the letters in Black Times New Roman Serif Font Typeface to be displayed:
 
-<img src="app/conf/letterF.jpg" width="48">
-[comment]: <> (<img src="app/conf/letterF.jpg" style="float: left; width: 30%; margin-right: 1%; margin-bottom: 0.5em;">)
-[comment]: <> (<img src="app/conf/letterT.jpg" style="float: left; width: 30%; margin-right: 1%; margin-bottom: 0.5em;">)
-
-<p style="clear: both;">
+<img src="app/conf/letterF.jpg" width="50">
+<img src="app/conf/letterF.jpg" width="50">
 
 ps: please note that the images displayed here are resized for space restrictions
