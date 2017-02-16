@@ -21,13 +21,11 @@ icubcontrib_set_default_prefix()
 set(doc ${PROJECT_NAME}.xml)
 source_group("DOC Files" FILES ${doc})
 
-include_directories(${YARP_INCLUDE_DIRS} ${doc} ${ICUB_INCLUDE_DIRS})
+include_directories(${YARP_INCLUDE_DIRS} ${ICUB_INCLUDE_DIRS})
 
-add_executable(${PROJECT_NAME} main.cpp)
+add_executable(${PROJECT_NAME} main.cpp ${doc})
 
 target_link_libraries(${PROJECT_NAME} ${YARP_LIBRARIES})
-# generate ad-hoc project to perform "make uninstall"
-#icubcontrib_add_uninstall_target()
 
 install(TARGETS ${PROJECT_NAME} DESTINATION bin)
 yarp_install(FILES ${doc} DESTINATION ${ICUBCONTRIB_MODULES_INSTALL_DIR})
