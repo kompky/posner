@@ -300,6 +300,7 @@ public:
             cmd.addDouble(70.0);
             faceEmotion.write(cmd);
             
+            yDebug("Going to pose %s", restP.toString().c_str());
             //go to rest position
             igaze->lookAtFixationPoint(restP);
             printStatus();
@@ -317,7 +318,7 @@ public:
             t1=t2=t3=t;
         }
         
-        yDebug("Time is %lf ", yarp::os::Time::now() - t);
+        //yDebug("Time is %lf ", yarp::os::Time::now() - t);
         
     }
 
