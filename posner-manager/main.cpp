@@ -306,7 +306,7 @@ public:
                 cmd.clear();
                 cmd.addString("set");
                 cmd.addString("eli");
-                cmd.addDouble(70.0);
+                cmd.addString("sad");
                 faceEmotion.write(cmd);
                 
                 yDebug("Going to pose %s", restP.toString().c_str());
@@ -335,7 +335,7 @@ public:
                 cmd.clear();
                 cmd.addString("set");
                 cmd.addString("eli");
-                cmd.addDouble(0.0);
+                cmd.addString("hap");
                 faceEmotion.write(cmd);
                 
                 yDebug("Going to pose %s", straightP.toString().c_str());
@@ -355,9 +355,9 @@ public:
                 else
                     vecRight.push_back(eyes.get(i).asDouble());
             
-            yDebug("Time is %lf - switching state", t-t2 );
+            yDebug("Time is %lf", t-t2 );
             
-            if (t-t2> 4.0)
+            if (t-t2> 3.0)
             {
                 if (!lookLeft)
                 {
@@ -366,7 +366,7 @@ public:
                     lookLeft=true;
                 }
             }
-            if (t-t2> 5.0)
+            if (t-t2> 4.0)
             {
                 if (!lookRight)
                 {
@@ -376,7 +376,7 @@ public:
                 }
             }
             
-            if (t-t2> 7.0)
+            if (t-t2> 5.0)
             {
                 yDebug("Time is %lf - switching state", t-t2 );
                 state = STATE_SCREEN;
