@@ -36,8 +36,8 @@ class Finder : public yarp::os::RFModule,
 {
     yarp::os::ResourceFinder *rf;
     yarp::os::RpcServer rpcPort;
-    yarp::os::BufferedPort<yarp::sig::ImageOf<yarp::sig::PixelRgb> >    imageOutPortLeft;
-    yarp::os::BufferedPort<yarp::sig::ImageOf<yarp::sig::PixelRgb> >    imageOutPortRight;
+    yarp::os::BufferedPort<yarp::sig::ImageOf<yarp::sig::PixelMono> >    imageOutPortLeft;
+    yarp::os::BufferedPort<yarp::sig::ImageOf<yarp::sig::PixelMono> >    imageOutPortRight;
 
     std::string outImgPortName;
 
@@ -46,7 +46,7 @@ class Finder : public yarp::os::RFModule,
     cv::Mat firstImage;
     cv::Mat secondImage;
     cv::Mat blackImage;
-    
+
     std::string location;
     std::string imageName;
     std::string firstImg;
@@ -78,9 +78,9 @@ class Finder : public yarp::os::RFModule,
         firstImg  = firstImageStr;
         secondImg = secondImageStr;
 
-        firstImage = cv::imread(imageOneStr, CV_LOAD_IMAGE_COLOR);
-        secondImage = cv::imread(imageTwoStr, CV_LOAD_IMAGE_COLOR);
-        
+        firstImage = cv::imread(imageOneStr, CV_LOAD_IMAGE_GRAYSCALE);
+        secondImage = cv::imread(imageTwoStr, CV_LOAD_IMAGE_GRAYSCALE);
+
         if(! firstImage.data || ! secondImage.data)
         {
             yError() <<"Could not open or find one or both imaged ";
@@ -98,39 +98,39 @@ class Finder : public yarp::os::RFModule,
     {
         bool returnValue = true;
         mutex.lock();
-        
+
         if(! firstImage.data || ! secondImage.data)
         {
             yError() <<"Please load images first";
             mutex.unlock();
             return false;
         }
-        
+
         if(strcmp (location.c_str(), "left")==0 || strcmp (location.c_str(), "right")==0)
             this->location = location;
         else
             returnValue = false;
-        
+
         if(strcmp (imageName.c_str(), firstImg.c_str())==0 || strcmp (imageName.c_str(), secondImg.c_str())==0)
             this->imageName = imageName;
         else
             returnValue = false;
-        
+
         mutex.unlock();
-        
+
         if (returnValue)
             askedToDisplay = true;
 
         return returnValue;
     }
-    
+
     /********************************************************/
     bool resetImages()
     {
         mutex.lock();
         askedToDisplay = false;
         mutex.unlock();
-        
+
         return true;
     }
 
@@ -181,16 +181,16 @@ class Finder : public yarp::os::RFModule,
     /********************************************************/
     bool updateModule()
     {
-        yarp::sig::ImageOf<yarp::sig::PixelRgb> &outImgLeft  = imageOutPortLeft.prepare();
-        yarp::sig::ImageOf<yarp::sig::PixelRgb> &outImgRight  = imageOutPortRight.prepare();
-        
+        yarp::sig::ImageOf<yarp::sig::PixelMono> &outImgLeft  = imageOutPortLeft.prepare();
+        yarp::sig::ImageOf<yarp::sig::PixelMono> &outImgRight  = imageOutPortRight.prepare();
+
         if( firstImage.data && secondImage.data)
         {
-            cv::Mat leftImage( firstImage.size(), CV_8UC3, cv::Scalar(0,0,0));
-            cv::Mat rightImage(firstImage.size(), CV_8UC3, cv::Scalar(0,0,0));
-            
+            cv::Mat leftImage( firstImage.size(), CV_8UC1, cv::Scalar(0));
+            cv::Mat rightImage(firstImage.size(), CV_8UC1, cv::Scalar(0));
+
             mutex.lock();
-            
+
             if (askedToDisplay)
             {
                 if (strcmp (location.c_str(), "left")==0)
@@ -208,20 +208,20 @@ class Finder : public yarp::os::RFModule,
                         rightImage = secondImage;
                 }
             }
-            
+
             mutex.unlock();
 
             IplImage yarpImgLeft = leftImage;
             outImgLeft.resize(yarpImgLeft.width, yarpImgLeft.height);
             cvCopy( &yarpImgLeft, (IplImage *) outImgLeft.getIplImage());
-            
+
             IplImage yarpImgRight = rightImage;
             outImgRight.resize(yarpImgRight.width, yarpImgRight.height);
             cvCopy( &yarpImgRight, (IplImage *) outImgRight.getIplImage());
 
             imageOutPortLeft.write();
             imageOutPortRight.write();
-            
+
         }
 
         return !closing;
