@@ -54,6 +54,11 @@
         <protocol>tcp</protocol>
     </connection>
     <connection>
+        <from>/posner-manager/faceEmotion:o</from>
+        <to>/icub/face/emotions/in</to>
+        <protocol>tcp</protocol>
+    </connection>
+    <connection>
         <from>/screen-handler/imageLeft:o</from>
         <to>/screenLeft</to>
         <protocol>udp</protocol>
