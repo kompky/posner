@@ -302,7 +302,7 @@ public:
             igaze->lookAtFixationPoint(restP);
             printStatus(restP);
             
-            if (t-t2> 2.0)
+            if (t-t1> 2.0)
             {
                 yDebug("Time is %lf - switching state", t-t2 );
                 state = STATE_INTERACT;
@@ -311,8 +311,9 @@ public:
         
         if ( state == STATE_INTERACT)
         {
-            igaze->lookAtFixationPoint(straightP);
             yDebug("IN STATE INTERACT");
+            igaze->lookAtFixationPoint(straightP);
+            printStatus(straightP);
             
             yarp::os::Bottle eyes = process.getEyes();
             
@@ -325,11 +326,16 @@ public:
                     vecRight.push_back(eyes.get(i).asDouble());
             }
             
-            
-            igaze->lookAtMonoPixelWithVergence(0, vecLeft, 5.0);
-            
             if (t-t2> 1.0)
+            {
+                yDebug("lookAtMonoPixelWithVergence LEFT" );
+                igaze->lookAtMonoPixelWithVergence(0, vecLeft, 5.0);
+            }
+            if (t-t2> 1.0)
+            {
+                yDebug("lookAtMonoPixelWithVergence RIGHT" );
                 igaze->lookAtMonoPixelWithVergence(0, vecRight, 5.0);
+            }
             
             if (t-t2> 3.0)
             {
@@ -340,6 +346,7 @@ public:
         
         if ( state == STATE_SCREEN)
         {
+            yDebug("lookAtFixationPoint SCREEN");
             igaze->lookAtFixationPoint(leftP);
             
             if (t-t2> 1.0)
@@ -353,9 +360,9 @@ public:
 
             if (t-t2> STILL_STATE_TIME)
             {
+                yDebug("In still state time");
                 t1=t2=t3=t;
-                
-                state = STATE_INITIAL;
+                //state = STATE_INITIAL;
             }
         }
     }
