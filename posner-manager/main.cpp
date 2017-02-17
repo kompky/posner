@@ -89,15 +89,15 @@ public:
         mutex.lock();
         yarp::os::Bottle eyes;
         
-        //eyes.addInt(rightEyeX);
-        //eyes.addInt(rightEyeY);
-        //eyes.addInt(leftEyeX);
-        //eyes.addInt(leftEyeY);
+        eyes.addInt(rightEyeX);
+        eyes.addInt(rightEyeY);
+        eyes.addInt(leftEyeX);
+        eyes.addInt(leftEyeY);
         
-        eyes.addInt(100);
-        eyes.addInt(120);
-        eyes.addInt(220);
-        eyes.addInt(120);
+        //eyes.addInt(100);
+        //eyes.addInt(120);
+        //eyes.addInt(220);
+        //eyes.addInt(120);
         
         //yDebug("EYES %s", eyes.toString().c_str());
         mutex.unlock();
@@ -226,6 +226,9 @@ public:
         }
         
         faceEmotion.open("/" + moduleName + "/faceEmotion:o");
+        
+        yarp::os::Network::connect("/faceLandmarks/landmarks:o", "/posner-manager/landmarks:i");
+        yarp::os::Network::connect("/posner-manager/faceEmotion:o", "/icub/face/emotions/in");
         
     }
 
