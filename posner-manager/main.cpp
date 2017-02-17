@@ -173,6 +173,8 @@ protected:
     double t4;
     
     bool actionDone;
+    bool lookLeft;
+    bool lookRight;
 
     /********************************************************/
     virtual void gazeEventCallback()
@@ -273,7 +275,9 @@ public:
 
         t=t0=t1=t2=t3=t4=yarp::os::Time::now();
         actionDone = false;
-
+        lookLeft = false;
+        lookRight = false;
+        
         return true;
     }
 
@@ -353,13 +357,21 @@ public:
             
             if (t-t2> 1.0)
             {
-                yDebug("lookAtMonoPixelWithVergence LEFT" );
-                igaze->lookAtMonoPixelWithVergence(0, vecLeft, 5.0);
+                if (!lookLeft)
+                {
+                    yDebug("lookAtMonoPixelWithVergence LEFT" );
+                    igaze->lookAtMonoPixelWithVergence(0, vecLeft, 5.0);
+                    lookLeft=true;
+                }
             }
             if (t-t2> 3.0)
             {
-                yDebug("lookAtMonoPixelWithVergence RIGHT" );
-                igaze->lookAtMonoPixelWithVergence(0, vecRight, 5.0);
+                if (!lookRight)
+                {
+                    yDebug("lookAtMonoPixelWithVergence RIGHT" );
+                    igaze->lookAtMonoPixelWithVergence(0, vecRight, 5.0);
+                    lookRight=true;
+                }
             }
             
             if (t-t2> 5.0)
