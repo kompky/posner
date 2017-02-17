@@ -342,7 +342,7 @@ public:
                 igaze->lookAtFixationPoint(straightP);
                 
                 actionDone = true;
-                t2 = t0;
+                //t2 = t;
             }
             printStatus(straightP);
                 
@@ -355,7 +355,7 @@ public:
                 else
                     vecRight.push_back(eyes.get(i).asDouble());
             
-            if (t-t2> 1.0)
+            if (t-t2> 4.0)
             {
                 if (!lookLeft)
                 {
@@ -364,7 +364,7 @@ public:
                     lookLeft=true;
                 }
             }
-            if (t-t2> 3.0)
+            if (t-t2> 5.0)
             {
                 if (!lookRight)
                 {
@@ -374,7 +374,7 @@ public:
                 }
             }
             
-            if (t-t2> 5.0)
+            if (t-t2> 7.0)
             {
                 yDebug("Time is %lf - switching state", t-t2 );
                 state = STATE_SCREEN;
