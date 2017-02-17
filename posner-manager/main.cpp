@@ -99,7 +99,7 @@ public:
         eyes.addInt(220);
         eyes.addInt(120);
         
-        yDebug("EYES %s", eyes.toString().c_str());
+        //yDebug("EYES %s", eyes.toString().c_str());
         mutex.unlock();
         
         return eyes;
@@ -342,7 +342,7 @@ public:
                 igaze->lookAtFixationPoint(straightP);
                 
                 actionDone = true;
-                t2 = t;
+                t2 = t0;
             }
             printStatus(straightP);
                 
