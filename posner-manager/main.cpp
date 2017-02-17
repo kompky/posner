@@ -152,6 +152,8 @@ protected:
     deque<Vector> poiList;
     
     ProcessLandmarks &process;
+    
+    std::string robotName;
 
     double t;
     double t0;
@@ -187,11 +189,21 @@ protected:
 
 public:
     /********************************************************/
-    CtrlThread(const double period, ProcessLandmarks &proc) : RateThread(int(period*1000.0)), process(proc)
+    CtrlThread(const double period, ProcessLandmarks &proc, yarp::os::ResourceFinder &rf) : RateThread(int(period*1000.0)), process(proc)
     {
         // here we specify that the event we are interested in is
         // of type "motion-done"
         gazeEventParameters.type="motion-done";
+        
+        //get infor from config file
+        std::string moduleName = rf.check("name", yarp::os::Value("posner-manager"), "module name (string)").asString();
+        robotName = rf.check("robot", yarp::os::Value("icubSim"), "robot name (string)").asString();
+        yarp::os::Bottle *restPos = rf.findGroup("head-positions").find("rest_position").asList();
+        
+        yDebug("NAME %s", moduleName.c_str());
+        yDebug("ROBOT %s", robotName.c_str());
+        yDebug("RESTING POS %s", restPos->toString().c_str());
+        
     }
 
     /********************************************************/
@@ -225,8 +237,10 @@ public:
         igaze->getInfo(info);
         fprintf(stdout,"info = %s\n",info.toString().c_str());
         
+        std::string portTorso = "/" + robotName + "/torso";
+        
         Property optTorso("(device remote_controlboard)");
-        optTorso.put("remote","/icubSim/torso");
+        optTorso.put("remote", portTorso);
         optTorso.put("local","/torso_client");
         
         if (!clientTorso.open(optTorso))
@@ -416,7 +430,7 @@ public:
         processLandmarks = new ProcessLandmarks( moduleName );
         processLandmarks->open();
         
-        thr=new CtrlThread(CTRL_THREAD_PER, *processLandmarks);
+        thr=new CtrlThread(CTRL_THREAD_PER, *processLandmarks, rf);
         
         if (!thr->start())
         {
