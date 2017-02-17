@@ -36,14 +36,16 @@
 
 #define CTRL_THREAD_PER     0.02        // [s]
 #define PRINT_STATUS_PER    1.0         // [s]
+
 #define STORE_POI_PER       3.0         // [s]
 #define SWITCH_STATE_PER    10.0        // [s]
 #define STILL_STATE_TIME    5.0         // [s]
 
-#define STATE_TRACK         0
-#define STATE_RECALL        1
-#define STATE_WAIT          2
-#define STATE_STILL         3
+#define STATE_INITIAL       0
+#define STATE_INTERACT      1
+#define STATE_NONINTERACT   2
+#define STATE_SCREEN        3
+#define STATE_WAIT          4
 
 using namespace yarp::math;
 
@@ -56,7 +58,7 @@ class ProcessLandmarks : public yarp::os::BufferedPort<yarp::os::Bottle>
     
     yarp::os::Mutex mutex;
     
-    
+
 public:
     /********************************************************/
     ProcessLandmarks( const std::string &moduleName )
@@ -138,6 +140,8 @@ protected:
     yarp::dev::IGazeControl      *igaze;
     yarp::dev::IEncoders         *ienc;
     yarp::dev::IPositionControl  *ipos;
+    
+    yarp::os::Port faceEmotion;
 
     int state;
     int startup_context_id;
@@ -172,12 +176,10 @@ protected:
         yInfo("Actual gaze configuration: (%s) [deg]\n",
                 ang.toString(3,3).c_str());
 
-        yInfo("Moving the torso; see if the gaze is compensated ...\n");
-
-        // move the torso yaw
-        double val;
-        ienc->getEncoder(0,&val);
-        ipos->positionMove(0,val>0.0?-30.0:30.0);
+        //move the torso yaw
+        //double val;
+        //ienc->getEncoder(0,&val);
+        //ipos->positionMove(0,val>0.0?-30.0:30.0);
 
         t4=t;
 
@@ -185,15 +187,14 @@ protected:
         igaze->unregisterEvent(*this);
 
         // switch state
-        state=STATE_STILL;
+        state=STATE_INITIAL;
     }
 
 public:
     /********************************************************/
     CtrlThread(const double period, ProcessLandmarks &proc, yarp::os::ResourceFinder &rf) : RateThread(int(period*1000.0)), process(proc)
     {
-        // here we specify that the event we are interested in is
-        // of type "motion-done"
+        // here we specify that the event we are interested in is of type "motion-done"
         gazeEventParameters.type="motion-done";
         
         //get info from config file
@@ -211,16 +212,23 @@ public:
         straightP.resize(straightPos->size());
         leftP.resize(leftScreenPos->size());
         rightP.resize(rightScreenPos->size());
+        
+        for (int i =0; i<restPos->size(); i++)
+        {
+            restP.push_back(restPos->get(i).asDouble());
+            downP.push_back(downPos->get(i).asDouble());
+            straightP.push_back(straightPos->get(i).asDouble());
+            leftP.push_back(leftScreenPos->get(i).asDouble());
+            rightP.push_back(rightScreenPos->get(i).asDouble());
+        }
+        
+        faceEmotion.open("/" + moduleName + "/faceEmotion:o");
     }
 
     /********************************************************/
     virtual bool threadInit()
     {
-        // open a client interface to connect to the gaze server
-        // we suppose that:
-        // 1 - the iCub simulator is running;
-        // 2 - the gaze server iKinGazeCtrl is running and
-        //     launched with the following options: "--from configSim.ini"
+    
         yarp::os::Property optGaze("(device gazecontrollerclient)");
         optGaze.put("remote","/iKinGazeCtrl");
         optGaze.put("local","/gaze_client");
@@ -245,7 +253,6 @@ public:
         yInfo("info = %s\n",info.toString().c_str());
         
         std::string portTorso = "/" + robotName + "/torso";
-        
         yarp::os::Property optTorso("(device remote_controlboard)");
         optTorso.put("remote", portTorso);
         optTorso.put("local","/torso_client");
@@ -260,7 +267,7 @@ public:
         
         fp.resize(3);
 
-        state=STATE_TRACK;
+        state=STATE_INITIAL;
 
         t=t0=t1=t2=t3=t4=yarp::os::Time::now();
 
@@ -281,63 +288,37 @@ public:
     {
         t=yarp::os::Time::now();
 
-        generateTarget();
-        
         //Bottle eyes = process.getEyes();
 
-        if (state==STATE_TRACK)
+        if (state == STATE_INITIAL)
         {
-            // look at the target (streaming)
-            igaze->lookAtFixationPoint(fp);
-
-            // some verbosity
+            //close eyes
+            yarp::os::Bottle cmd;
+            cmd.clear();
+            cmd.addString("set");
+            cmd.addString("eli");
+            cmd.addDouble(70.0);
+            faceEmotion.write(cmd);
+            
+            //go to rest position
+            igaze->lookAtFixationPoint(restP);
             printStatus();
-
-            // we collect from time to time
-            // some interesting points (POI)
-            // where to look at soon afterwards
-            storeInterestingPoint();
-
-            if (t-t2>=SWITCH_STATE_PER)
+            
+            if (t-t2> 2.0)
             {
-                // switch state
-                state=STATE_RECALL;
+                yDebug("Time is %lf - switching state", t-t2 );
+                state = STATE_INTERACT;
             }
         }
-
-        if (state==STATE_RECALL)
+        
+        if ( state == STATE_INTERACT)
         {
-            // pick up the first POI
-            // and clear the list
-            yarp::sig::Vector ang=poiList.front();
-            poiList.clear();
-
-            yInfo("Retrieving POI #0 ... (%s) [deg]\n",
-                    ang.toString(3,3).c_str());
-
-            // register the motion-done event, attaching the callback
-            // that will be executed as soon as the gaze is accomplished
-            igaze->registerEvent(*this);
-
-            // look at the chosen POI
-            igaze->lookAtAbsAngles(ang);
-
-            // switch state
-            state=STATE_WAIT;
+            yDebug("IN STATE INTERACT");
+            t1=t2=t3=t;
         }
-
-        if (state==STATE_STILL)
-        {
-            if (t-t4>=STILL_STATE_TIME)
-            {
-                fprintf(stdout,"done\n");
-
-                t1=t2=t3=t;
-
-                // switch state
-                state=STATE_TRACK;
-            }
-        }
+        
+        yDebug("Time is %lf ", yarp::os::Time::now() - t);
+        
     }
 
     /********************************************************/
@@ -349,22 +330,14 @@ public:
 
         clientGaze.close();
         clientTorso.close();
+        faceEmotion.interrupt();
+        faceEmotion.close();
     }
     
     /********************************************************/
     void getUserEyes()
     {
         
-    }
-
-    /********************************************************/
-    void generateTarget()
-    {
-        // Here find a way to randomly select which screen to look at etc ...
-
-        fp[0]=-0.5;
-        fp[1]=+0.0+0.1*cos(2.0*M_PI*0.1*(t-t0));
-        fp[2]=+0.3+0.1*sin(2.0*M_PI*0.1*(t-t0));
     }
 
     /********************************************************/
