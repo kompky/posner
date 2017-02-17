@@ -355,6 +355,8 @@ public:
                 else
                     vecRight.push_back(eyes.get(i).asDouble());
             
+            yDebug("Time is %lf - switching state", t-t2 );
+            
             if (t-t2> 4.0)
             {
                 if (!lookLeft)
@@ -393,6 +395,7 @@ public:
             
             if (t-t2> 1.0)
             {
+                yDebug("Time is %lf - switching state", t-t2 );
                 state = STATE_WAIT;
             }
         }
