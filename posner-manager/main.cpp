@@ -207,12 +207,6 @@ public:
         yarp::os::Bottle *leftScreenPos = rf.findGroup("head-positions").find("left_screen").asList();
         yarp::os::Bottle *rightScreenPos = rf.findGroup("head-positions").find("right_screen").asList();
     
-        restP.resize(restPos->size());
-        downP.resize(downPos->size());
-        straightP.resize(straightPos->size());
-        leftP.resize(leftScreenPos->size());
-        rightP.resize(rightScreenPos->size());
-        
         for (int i =0; i<restPos->size(); i++)
         {
             restP.push_back(restPos->get(i).asDouble());
