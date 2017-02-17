@@ -249,8 +249,8 @@ public:
         igaze->storeContext(&startup_context_id);
         
         // set trajectory time:
-        igaze->setNeckTrajTime(0.8);
-        igaze->setEyesTrajTime(0.4);
+        igaze->setNeckTrajTime(0.6);
+        igaze->setEyesTrajTime(0.3);
         
         igaze->setTrackingMode(true);
         
@@ -351,35 +351,45 @@ public:
                 
             yarp::os::Bottle eyes = process.getEyes();
             
-            yarp::sig::Vector vecLeft, vecRight;
-            for (int i=0; i< eyes.size(); i++)
-                if (i<2)
-                    vecLeft.push_back(eyes.get(i).asDouble());
-                else
-                    vecRight.push_back(eyes.get(i).asDouble());
-            
             yDebug("Time is %lf", t-t2 );
             
+            yDebug("EYES AT: %s", eyes.toString().c_str());            
+
+
             if (t-t2> 3.0)
             {
                 if (!lookLeft)
                 {
-                    yDebug("lookAtMonoPixelWithVergence LEFT" );
-                    igaze->lookAtMonoPixelWithVergence(0, vecLeft, 5.0);
+                    yarp::sig::Vector vecLeft;
+                    yDebug("EYES AT: %s", eyes.toString().c_str());
+                    
+                    for (int i=0; i< eyes.size()/2; i++)
+                        vecLeft.push_back(eyes.get(i).asDouble());
+
+                    vecLeft[1] = vecLeft[1] + 15;
+
+                    yDebug("LOOKING AT: %s", vecLeft.toString(2,2).c_str());
+                    igaze->lookAtMonoPixelWithVergence(0, vecLeft, 10.0);
                     lookLeft=true;
                 }
-            }
-            if (t-t2> 4.0)
+          }   
+          /*  if (t-t2> 3.0)
             {
                 if (!lookRight)
                 {
-                    yDebug("lookAtMonoPixelWithVergence RIGHT" );
-                    igaze->lookAtMonoPixelWithVergence(0, vecRight, 5.0);
+                    yarp::sig::Vector vecRight;
+                    for (int i=2; i< eyes.size(); i++)
+                        vecRight.push_back(eyes.get(i).asDouble());
+
+                    vecRight
+                    
+                    yDebug("LOOKING AT: %s", vecRight.toString(2,2).c_str());
+                    igaze->lookAtMonoPixelWithVergence(0, vecRight, 10.0);
                     lookRight=true;
                 }
-            }
-            
-            if (t-t2> 5.0)
+            }*/
+           
+            if (t-t2> 4.5)
             {
                 yDebug("Time is %lf - switching state", t-t2 );
                 state = STATE_SCREEN;
