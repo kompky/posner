@@ -171,6 +171,8 @@ protected:
     double t2;
     double t3;
     double t4;
+    
+    bool actionDone;
 
     /********************************************************/
     virtual void gazeEventCallback()
@@ -222,6 +224,7 @@ public:
         }
         
         faceEmotion.open("/" + moduleName + "/faceEmotion:o");
+        
     }
 
     /********************************************************/
@@ -269,6 +272,7 @@ public:
         state=STATE_INITIAL;
 
         t=t0=t1=t2=t3=t4=yarp::os::Time::now();
+        actionDone = false;
 
         return true;
     }
@@ -289,65 +293,94 @@ public:
 
         if (state == STATE_INITIAL)
         {
-            //close eyes
-            yarp::os::Bottle cmd;
-            cmd.clear();
-            cmd.addString("set");
-            cmd.addString("eli");
-            cmd.addDouble(70.0);
-            faceEmotion.write(cmd);
-            
-            yDebug("Going to pose %s", restP.toString().c_str());
-            //go to rest position
-            igaze->lookAtFixationPoint(restP);
-            printStatus(restP);
+            yDebug("IN STATE INITIAL");
+            if (!actionDone)
+            {
+                yDebug("CLOSING EYES");
+                //close eyes
+                yarp::os::Bottle cmd;
+                cmd.clear();
+                cmd.addString("set");
+                cmd.addString("eli");
+                cmd.addDouble(70.0);
+                faceEmotion.write(cmd);
+                
+                yDebug("Going to pose %s", restP.toString().c_str());
+                //go to rest position
+                igaze->lookAtFixationPoint(restP);
+                actionDone = true;
+            }
+                printStatus(restP);
             
             if (t-t2> 2.0)
             {
                 yDebug("Time is %lf - switching state", t-t2 );
                 state = STATE_INTERACT;
+                actionDone = false;
             }
         }
         
         if ( state == STATE_INTERACT)
         {
             yDebug("IN STATE INTERACT");
-            igaze->lookAtFixationPoint(straightP);
+            if (!actionDone)
+            {
+                yDebug("OPEINING EYES");
+                //open eyes
+                yarp::os::Bottle cmd;
+                cmd.clear();
+                cmd.addString("set");
+                cmd.addString("eli");
+                cmd.addDouble(0.0);
+                faceEmotion.write(cmd);
+                
+                yDebug("Going to pose %s", straightP.toString().c_str());
+                igaze->lookAtFixationPoint(straightP);
+                
+                actionDone = true;
+            }
             printStatus(straightP);
-            
+                
             yarp::os::Bottle eyes = process.getEyes();
             
             yarp::sig::Vector vecLeft, vecRight;
             for (int i=0; i< eyes.size(); i++)
-            {
                 if (i<2)
                     vecLeft.push_back(eyes.get(i).asDouble());
                 else
                     vecRight.push_back(eyes.get(i).asDouble());
-            }
             
-            if (t-t2> 1.0)
+            /*if (t-t2> 1.0)
             {
-                yDebug("lookAtMonoPixelWithVergence LEFT" );
-                igaze->lookAtMonoPixelWithVergence(0, vecLeft, 5.0);
+                if (actionDone)
+                {
+                    yDebug("lookAtMonoPixelWithVergence LEFT" );
+                    igaze->lookAtMonoPixelWithVergence(0, vecLeft, 5.0);
+                    
+                }
             }
             if (t-t2> 1.0)
             {
                 yDebug("lookAtMonoPixelWithVergence RIGHT" );
                 igaze->lookAtMonoPixelWithVergence(0, vecRight, 5.0);
-            }
+            }*/
             
             if (t-t2> 3.0)
             {
                 yDebug("Time is %lf - switching state", t-t2 );
                 state = STATE_SCREEN;
+                actionDone = false;
             }
         }
         
         if ( state == STATE_SCREEN)
         {
-            yDebug("lookAtFixationPoint SCREEN");
-            igaze->lookAtFixationPoint(leftP);
+            if (!actionDone)
+            {
+                yDebug("lookAtFixationPoint SCREEN");
+                yDebug("Going to pose %s", straightP.toString().c_str());
+                igaze->lookAtFixationPoint(leftP);
+            }
             
             if (t-t2> 1.0)
             {
@@ -357,7 +390,8 @@ public:
         
         if ( state == STATE_WAIT)
         {
-
+            yDebug("IN STATE WAIT");
+            
             if (t-t2> STILL_STATE_TIME)
             {
                 yDebug("In still state time");
