@@ -351,22 +351,20 @@ public:
                 else
                     vecRight.push_back(eyes.get(i).asDouble());
             
-            /*if (t-t2> 1.0)
+            if (t-t2> 1.0)
             {
-                if (actionDone)
-                {
-                    yDebug("lookAtMonoPixelWithVergence LEFT" );
-                    igaze->lookAtMonoPixelWithVergence(0, vecLeft, 5.0);
-                    
-                }
+                yDebug("lookAtMonoPixelWithVergence LEFT" );
+                igaze->lookAtMonoPixelWithVergence(0, vecLeft, 5.0);
+                t2 = t;
             }
             if (t-t2> 1.0)
             {
                 yDebug("lookAtMonoPixelWithVergence RIGHT" );
                 igaze->lookAtMonoPixelWithVergence(0, vecRight, 5.0);
-            }*/
+                t2 = t;
+            }
             
-            if (t-t2> 5.0)
+            if (t-t2> 1.0)
             {
                 yDebug("Time is %lf - switching state", t-t2 );
                 state = STATE_SCREEN;
@@ -379,7 +377,7 @@ public:
             if (!actionDone)
             {
                 yDebug("lookAtFixationPoint SCREEN");
-                yDebug("Going to pose %s", straightP.toString().c_str());
+                yDebug("Going to pose %s", leftP.toString().c_str());
                 igaze->lookAtFixationPoint(leftP);
             }
             
