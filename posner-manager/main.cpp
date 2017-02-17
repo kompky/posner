@@ -302,7 +302,7 @@ public:
             igaze->lookAtFixationPoint(restP);
             printStatus(restP);
             
-            if (t-t1> 2.0)
+            if (t-t2> 2.0)
             {
                 yDebug("Time is %lf - switching state", t-t2 );
                 state = STATE_INTERACT;
