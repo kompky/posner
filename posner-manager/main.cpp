@@ -303,7 +303,7 @@ public:
             yDebug("Going to pose %s", restP.toString().c_str());
             //go to rest position
             igaze->lookAtFixationPoint(restP);
-            printStatus();
+            printStatus(restP);
             
             if (t-t2> 2.0)
             {
@@ -366,7 +366,7 @@ public:
     }
 
     /********************************************************/
-    void printStatus()
+    void printStatus(yarp::sig::Vector &vec)
     {
         if (t-t1>=PRINT_STATUS_PER)
         {
@@ -376,9 +376,9 @@ public:
             igaze->getFixationPoint(x);
 
             yInfo("+++++++++\n");
-            yInfo("fp         [m] = (%s)\n",fp.toString(3,3).c_str());
+            yInfo("fp         [m] = (%s)\n",vec.toString(3,3).c_str());
             yInfo("x          [m] = (%s)\n",x.toString(3,3).c_str());
-            yInfo("norm(fp-x) [m] = %g\n",  norm(fp-x));
+            yInfo("norm(fp-x) [m] = %g\n",  norm(vec-x));
             yInfo("---------\n\n");
 
             t1=t;
