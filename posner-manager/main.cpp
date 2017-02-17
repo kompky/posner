@@ -45,10 +45,6 @@
 #define STATE_WAIT          2
 #define STATE_STILL         3
 
-using namespace std;
-using namespace yarp::os;
-using namespace yarp::dev;
-using namespace yarp::sig;
 using namespace yarp::math;
 
 /********************************************************/
@@ -128,28 +124,33 @@ public:
             leftEyeX = landmarks.get(0).asList()->get(72).asInt() + ((landmarks.get(0).asList()->get(78).asInt()) - landmarks.get(0).asList()->get(72).asInt());
             leftEyeY = landmarks.get(0).asList()->get(75).asInt() + ((landmarks.get(0).asList()->get(81).asInt()) - landmarks.get(0).asList()->get(75).asInt());
             mutex.unlock();
-            
         }
     }
 };
 
 /********************************************************/
-class CtrlThread: public RateThread,
-                  public GazeEvent
+class CtrlThread: public yarp::os::RateThread,
+                  public yarp::dev::GazeEvent
 {
 protected:
-    PolyDriver        clientGaze;
-    PolyDriver        clientTorso;
-    IGazeControl      *igaze;
-    IEncoders         *ienc;
-    IPositionControl  *ipos;
+    yarp::dev::PolyDriver        clientGaze;
+    yarp::dev::PolyDriver        clientTorso;
+    yarp::dev::IGazeControl      *igaze;
+    yarp::dev::IEncoders         *ienc;
+    yarp::dev::IPositionControl  *ipos;
 
     int state;
     int startup_context_id;
 
-    Vector fp;
+    yarp::sig::Vector fp;
+    
+    yarp::sig::Vector restP;
+    yarp::sig::Vector downP;
+    yarp::sig::Vector straightP;
+    yarp::sig::Vector leftP;
+    yarp::sig::Vector rightP;
 
-    deque<Vector> poiList;
+    std::deque<yarp::sig::Vector> poiList;
     
     ProcessLandmarks &process;
     
@@ -165,13 +166,13 @@ protected:
     /********************************************************/
     virtual void gazeEventCallback()
     {
-        Vector ang;
+        yarp::sig::Vector ang;
         igaze->getAngles(ang);
 
-        fprintf(stdout,"Actual gaze configuration: (%s) [deg]\n",
+        yInfo("Actual gaze configuration: (%s) [deg]\n",
                 ang.toString(3,3).c_str());
 
-        fprintf(stdout,"Moving the torso; see if the gaze is compensated ...\n");
+        yInfo("Moving the torso; see if the gaze is compensated ...\n");
 
         // move the torso yaw
         double val;
@@ -195,15 +196,21 @@ public:
         // of type "motion-done"
         gazeEventParameters.type="motion-done";
         
-        //get infor from config file
+        //get info from config file
         std::string moduleName = rf.check("name", yarp::os::Value("posner-manager"), "module name (string)").asString();
         robotName = rf.check("robot", yarp::os::Value("icubSim"), "robot name (string)").asString();
+        
         yarp::os::Bottle *restPos = rf.findGroup("head-positions").find("rest_position").asList();
-        
-        yDebug("NAME %s", moduleName.c_str());
-        yDebug("ROBOT %s", robotName.c_str());
-        yDebug("RESTING POS %s", restPos->toString().c_str());
-        
+        yarp::os::Bottle *downPos = rf.findGroup("head-positions").find("down_position").asList();
+        yarp::os::Bottle *straightPos = rf.findGroup("head-positions").find("straight_position").asList();
+        yarp::os::Bottle *leftScreenPos = rf.findGroup("head-positions").find("left_screen").asList();
+        yarp::os::Bottle *rightScreenPos = rf.findGroup("head-positions").find("right_screen").asList();
+    
+        restP.resize(restPos->size());
+        downP.resize(downPos->size());
+        straightP.resize(straightPos->size());
+        leftP.resize(leftScreenPos->size());
+        rightP.resize(rightScreenPos->size());
     }
 
     /********************************************************/
@@ -214,7 +221,7 @@ public:
         // 1 - the iCub simulator is running;
         // 2 - the gaze server iKinGazeCtrl is running and
         //     launched with the following options: "--from configSim.ini"
-        Property optGaze("(device gazecontrollerclient)");
+        yarp::os::Property optGaze("(device gazecontrollerclient)");
         optGaze.put("remote","/iKinGazeCtrl");
         optGaze.put("local","/gaze_client");
 
@@ -233,13 +240,13 @@ public:
         igaze->setTrackingMode(true);
         
         // print out some info about the controller
-        Bottle info;
+        yarp::os::Bottle info;
         igaze->getInfo(info);
-        fprintf(stdout,"info = %s\n",info.toString().c_str());
+        yInfo("info = %s\n",info.toString().c_str());
         
         std::string portTorso = "/" + robotName + "/torso";
         
-        Property optTorso("(device remote_controlboard)");
+        yarp::os::Property optTorso("(device remote_controlboard)");
         optTorso.put("remote", portTorso);
         optTorso.put("local","/torso_client");
         
@@ -255,7 +262,7 @@ public:
 
         state=STATE_TRACK;
 
-        t=t0=t1=t2=t3=t4=Time::now();
+        t=t0=t1=t2=t3=t4=yarp::os::Time::now();
 
         return true;
     }
@@ -264,15 +271,15 @@ public:
     virtual void afterStart(bool s)
     {
         if (s)
-            fprintf(stdout,"Thread started successfully\n");
+            yInfo("Thread started successfully\n");
         else
-            fprintf(stdout,"Thread did not start\n");
+            yInfo("Thread did not start\n");
     }
 
     /********************************************************/
     virtual void run()
     {
-        t=Time::now();
+        t=yarp::os::Time::now();
 
         generateTarget();
         
@@ -302,10 +309,10 @@ public:
         {
             // pick up the first POI
             // and clear the list
-            Vector ang=poiList.front();
+            yarp::sig::Vector ang=poiList.front();
             poiList.clear();
 
-            fprintf(stdout,"Retrieving POI #0 ... (%s) [deg]\n",
+            yInfo("Retrieving POI #0 ... (%s) [deg]\n",
                     ang.toString(3,3).c_str());
 
             // register the motion-done event, attaching the callback
@@ -365,7 +372,7 @@ public:
     {
         if (t-t3>=STORE_POI_PER)
         {
-            Vector ang;
+            yarp::sig::Vector ang;
 
             // we store the current azimuth, elevation
             // and vergence wrt the absolute reference frame
@@ -375,7 +382,7 @@ public:
             igaze->getAngles(ang);
 
             int numPOI=(int)poiList.size();
-            fprintf(stdout,"Storing POI #%d: (%s) [deg]\n",
+            yInfo("Storing POI #%d: (%s) [deg]\n",
                     numPOI,ang.toString(3,3).c_str());
 
             poiList.push_back(ang);
@@ -391,14 +398,14 @@ public:
         {
             // we get the current fixation point in the
             // operational space
-            Vector x;
+            yarp::sig::Vector x;
             igaze->getFixationPoint(x);
 
-            fprintf(stdout,"+++++++++\n");
-            fprintf(stdout,"fp         [m] = (%s)\n",fp.toString(3,3).c_str());
-            fprintf(stdout,"x          [m] = (%s)\n",x.toString(3,3).c_str());
-            fprintf(stdout,"norm(fp-x) [m] = %g\n",norm(fp-x));
-            fprintf(stdout,"---------\n\n");
+            yInfo("+++++++++\n");
+            yInfo("fp         [m] = (%s)\n",fp.toString(3,3).c_str());
+            yInfo("x          [m] = (%s)\n",x.toString(3,3).c_str());
+            yInfo("norm(fp-x) [m] = %g\n",  norm(fp-x));
+            yInfo("---------\n\n");
 
             t1=t;
         }
@@ -406,7 +413,7 @@ public:
 };
 
 /********************************************************/
-class CtrlModule: public RFModule
+class CtrlModule: public yarp::os::RFModule
 {
 protected:
     CtrlThread *thr;
@@ -416,15 +423,15 @@ protected:
     friend class                processLandmarks;
     
 public:
-    virtual bool configure(ResourceFinder &rf)
+    virtual bool configure(yarp::os::ResourceFinder &rf)
     {
-        Time::turboBoost();
+        yarp::os::Time::turboBoost();
+        
+        if (!rf.check("name"))
+            return false;
         
         std::string moduleName = rf.check("name", yarp::os::Value("posner-manager"), "module name (string)").asString();
-        
-        yarp::os::Bottle *restPos = rf.findGroup("head-positions").find("rest_position").asList();
-        
-        
+    
         setName(moduleName.c_str());
 
         processLandmarks = new ProcessLandmarks( moduleName );
@@ -467,16 +474,16 @@ public:
 /********************************************************/
 int main(int argc, char *argv[])
 {
-    Network yarp;
+    yarp::os::Network yarp;
     if (!yarp.checkNetwork())
     {
-        fprintf(stdout,"Error: yarp server does not seem available\n");
+        yInfo("Error: yarp server does not seem available\n");
         return 1;
     }
 
     CtrlModule mod;
 
-    ResourceFinder rf;
+    yarp::os::ResourceFinder rf;
     
     rf.setVerbose();
     rf.configure(argc,argv);
