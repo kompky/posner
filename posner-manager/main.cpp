@@ -338,6 +338,7 @@ public:
                 igaze->lookAtFixationPoint(straightP);
                 
                 actionDone = true;
+                t2 = t;
             }
             printStatus(straightP);
                 
@@ -365,7 +366,7 @@ public:
                 igaze->lookAtMonoPixelWithVergence(0, vecRight, 5.0);
             }*/
             
-            if (t-t2> 3.0)
+            if (t-t2> 5.0)
             {
                 yDebug("Time is %lf - switching state", t-t2 );
                 state = STATE_SCREEN;
