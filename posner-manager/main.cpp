@@ -89,10 +89,15 @@ public:
         mutex.lock();
         yarp::os::Bottle eyes;
         
-        eyes.addInt(rightEyeX);
-        eyes.addInt(rightEyeY);
-        eyes.addInt(leftEyeX);
-        eyes.addInt(leftEyeY);
+        //eyes.addInt(rightEyeX);
+        //eyes.addInt(rightEyeY);
+        //eyes.addInt(leftEyeX);
+        //eyes.addInt(leftEyeY);
+        
+        eyes.addInt(100);
+        eyes.addInt(120);
+        eyes.addInt(220);
+        eyes.addInt(120);
         
         yDebug("EYES %s", eyes.toString().c_str());
         mutex.unlock();
@@ -282,8 +287,6 @@ public:
     {
         t=yarp::os::Time::now();
 
-        //Bottle eyes = process.getEyes();
-
         if (state == STATE_INITIAL)
         {
             //close eyes
@@ -308,12 +311,53 @@ public:
         
         if ( state == STATE_INTERACT)
         {
+            igaze->lookAtFixationPoint(straightP);
             yDebug("IN STATE INTERACT");
-            t1=t2=t3=t;
+            
+            yarp::os::Bottle eyes = process.getEyes();
+            
+            yarp::sig::Vector vecLeft, vecRight;
+            for (int i=0; i< eyes.size(); i++)
+            {
+                if (i<2)
+                    vecLeft.push_back(eyes.get(i).asDouble());
+                else
+                    vecRight.push_back(eyes.get(i).asDouble());
+            }
+            
+            
+            igaze->lookAtMonoPixelWithVergence(0, vecLeft, 5.0);
+            
+            if (t-t2> 1.0)
+                igaze->lookAtMonoPixelWithVergence(0, vecRight, 5.0);
+            
+            if (t-t2> 3.0)
+            {
+                yDebug("Time is %lf - switching state", t-t2 );
+                state = STATE_SCREEN;
+            }
         }
         
-        //yDebug("Time is %lf ", yarp::os::Time::now() - t);
+        if ( state == STATE_SCREEN)
+        {
+            igaze->lookAtFixationPoint(leftP);
+            
+            if (t-t2> 1.0)
+            {
+                state = STATE_WAIT;
+            }
+        }
         
+        if ( state == STATE_WAIT)
+        {
+
+            if (t-t2> STILL_STATE_TIME)
+            {
+                t1=t2=t3=t;
+                
+                state = STATE_INITIAL;
+            }
+        }
     }
 
     /********************************************************/
