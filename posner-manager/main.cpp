@@ -19,6 +19,7 @@
 #include <yarp/os/RFModule.h>
 #include <yarp/os/RateThread.h>
 #include <yarp/os/Time.h>
+#include <yarp/os/RpcClient.h>
 #include <yarp/sig/Vector.h>
 #include <yarp/math/Math.h>
 #include <yarp/os/Log.h>
@@ -29,12 +30,29 @@
 #include <yarp/dev/GazeControl.h>
 #include <yarp/dev/PolyDriver.h>
 
+
 #include <gsl/gsl_math.h>
 
 #include <stdio.h>
 #include <deque>
 
+//include added by kyveli
+#include <string>
+#include <vector>
+#include <sstream>
+
+#include <stdlib.h>
+#include <fcntl.h>
+#include <linux/input.h>
+#include <unistd.h>
+#include <iostream>
+#include <fstream>
+
+#define MOUSEFILE "/dev/input/mice"
+
+
 #define CTRL_THREAD_PER     0.02        // [s]
+
 #define PRINT_STATUS_PER    1.0         // [s]
 
 #define STORE_POI_PER       3.0         // [s]
@@ -45,7 +63,8 @@
 #define STATE_INTERACT      1
 #define STATE_NONINTERACT   2
 #define STATE_SCREEN        3
-#define STATE_WAIT          4
+#define STATE_RESPONSE      4
+#define STATE_WAIT          5
 
 using namespace yarp::math;
 
@@ -89,15 +108,15 @@ public:
         mutex.lock();
         yarp::os::Bottle eyes;
         
-        eyes.addInt(rightEyeX);
-        eyes.addInt(rightEyeY);
-        eyes.addInt(leftEyeX);
-        eyes.addInt(leftEyeY);
+       // eyes.addInt(rightEyeX);
+      //  eyes.addInt(rightEyeY);
+      //  eyes.addInt(leftEyeX);
+       // eyes.addInt(leftEyeY);
         
-        //eyes.addInt(100);
-        //eyes.addInt(120);
-        //eyes.addInt(220);
-        //eyes.addInt(120);
+        eyes.addInt(100);
+        eyes.addInt(120);
+        eyes.addInt(220);
+        eyes.addInt(120);
         
         //yDebug("EYES %s", eyes.toString().c_str());
         mutex.unlock();
@@ -147,6 +166,8 @@ protected:
     yarp::dev::IPositionControl  *ipos;
     
     yarp::os::Port faceEmotion;
+    yarp::os::RpcClient rpcPort;
+    
 
     int state;
     int startup_context_id;
@@ -158,12 +179,20 @@ protected:
     yarp::sig::Vector straightP;
     yarp::sig::Vector leftP;
     yarp::sig::Vector rightP;
+   
 
     std::deque<yarp::sig::Vector> poiList;
     
     ProcessLandmarks &process;
     
     std::string robotName;
+    //yarp::sig::Matrix ConditionMatrix;
+    yarp::os::Bottle Conditions;
+
+   
+    //yarp::sig::Vector <string> ConditionVector;
+    //std::vector<std::vector<cv::Point> > contours;
+    //std::vector<std::string> ConditionVector;
 
     double t;
     double t0;
@@ -175,6 +204,21 @@ protected:
     bool actionDone;
     bool lookLeft;
     bool lookRight;
+
+    int ConditionId;
+
+    yarp::os::Bottle num;
+    //Variable initialization used later to insert each rwo condition string and isolate difefrent words (e. interact, left, right)
+    std::string buf; // Have a buffer string
+    
+    std::vector<std::string> tokens; // Create vector to hold our words
+    std::ofstream results;
+
+    //Variable initialization used later to detect mouse events
+    //int fd;
+    
+
+
 
     /********************************************************/
     virtual void gazeEventCallback()
@@ -218,23 +262,41 @@ public:
     
         for (int i =0; i<restPos->size(); i++)
         {
+            yInfo("restPos = %f ", restPos->get(i).asDouble());
             restP.push_back(restPos->get(i).asDouble());
             downP.push_back(downPos->get(i).asDouble());
             straightP.push_back(straightPos->get(i).asDouble());
             leftP.push_back(leftScreenPos->get(i).asDouble());
             rightP.push_back(rightScreenPos->get(i).asDouble());
         }
+      
+                
+       
+        Conditions = rf.findGroup("combinations");   
         
-        faceEmotion.open("/" + moduleName + "/faceEmotion:o");
-        
+
+        faceEmotion.open("/" + moduleName + "/faceEmotion:o");  
+        rpcPort.open("/" + moduleName + "/rpc");     
+     
+
         yarp::os::Network::connect("/faceLandmarks/landmarks:o", "/posner-manager/landmarks:i");
         yarp::os::Network::connect("/posner-manager/faceEmotion:o", "/icub/face/emotions/in");
+
+        yarp::os::Network::connect("/posner-manager/rpc", "/screen-handler/rpc");
         
+        //you have to change this number depending on the number of the participant
+        num.addInt(1);
+        results.open("PartcipantsResults.csv");
+        results << "Partcipant"<< ", "<< "InteractionMode" <<", "<< "RobotScreen" << ", " << "LetterScreen" << ", " <<"Letter"<< ", " <<"PressButton"<<std::endl;  
+       
+        yDebug("public");
+
     }
 
     /********************************************************/
     virtual bool threadInit()
-    {
+    {   
+        
     
         yarp::os::Property optGaze("(device gazecontrollerclient)");
         optGaze.put("remote","/iKinGazeCtrl");
@@ -275,12 +337,12 @@ public:
         fp.resize(3);
 
         state=STATE_INITIAL;
-
+        yDebug("threadInit");
         t=t0=t1=t2=t3=t4=yarp::os::Time::now();
         actionDone = false;
         lookLeft = false;
         lookRight = false;
-        
+        ConditionId =0;     
         return true;
     }
 
@@ -296,11 +358,17 @@ public:
     /********************************************************/
     virtual void run()
     {
-        t=yarp::os::Time::now();
 
+        
+        if (ConditionId ==Conditions.size()+1)      
+            threadRelease();
+
+        t=yarp::os::Time::now();
+        yDebug("Time is %lf", t-t2 );
         if (state == STATE_INITIAL)
         {
             yDebug("IN STATE INITIAL");
+           
             if (!actionDone)
             {
                 yDebug("CLOSING EYES");
@@ -321,15 +389,32 @@ public:
             
             if (t-t2> 2.0)
             {
+                
+                ConditionId=ConditionId+1;
+                yDebug("Condition at: %d", ConditionId);
+
+
+
+                std::stringstream ss(Conditions.get(ConditionId).toString().c_str()); // Insert the string into a stream
+               
+                while (ss >> buf)
+
+                tokens.push_back(buf);
+                std::cout<<tokens[0]<<std::endl;
+                std::cout<<tokens[1]<<std::endl;
+                std::cout<<tokens[2]<<std::endl;
+                std::cout<<tokens[3]<<std::endl; 
                 yDebug("Time is %lf - switching state", t-t2 );
                 state = STATE_INTERACT;
-                actionDone = false;
+                actionDone = false;  
             }
         }
+
+        
         
         if ( state == STATE_INTERACT)
         {
-            yDebug("IN STATE INTERACT");
+            yDebug("IN STATE INTERACTION MODE");
             if (!actionDone)
             {
                 yDebug("OPEINING EYES");
@@ -357,37 +442,40 @@ public:
 
 
             if (t-t2> 3.0)
-            {
-                if (!lookLeft)
-                {
-                    yarp::sig::Vector vecLeft;
-                    yDebug("EYES AT: %s", eyes.toString().c_str());
-                    
-                    for (int i=0; i< eyes.size()/2; i++)
-                        vecLeft.push_back(eyes.get(i).asDouble());
+            {   
+                if(tokens[0].compare("Interact")==0)
 
-                    vecLeft[1] = vecLeft[1] + 15;
+                {   
+                    yDebug("Robot is interacting with human");
+                    if (!lookLeft)
+                    {
+                        yarp::sig::Vector vecLeft;
+                        yDebug("EYES AT: %s", eyes.toString().c_str());
+                        
+                        for (int i=0; i< eyes.size()/2; i++)
+                            vecLeft.push_back(eyes.get(i).asDouble());
 
-                    yDebug("LOOKING AT: %s", vecLeft.toString(2,2).c_str());
-                    igaze->lookAtMonoPixelWithVergence(0, vecLeft, 10.0);
-                    lookLeft=true;
+                        vecLeft[1] = vecLeft[1] + 15;
+
+                        yDebug("LOOKING AT: %s", vecLeft.toString(2,2).c_str());
+                        igaze->lookAtMonoPixelWithVergence(0, vecLeft, 10.0);
+                        lookLeft=true;
+                    }
                 }
+                else
+                {
+                    yDebug("Robot is not interacting with human");
+                    if (!lookLeft)
+                    {
+                        yDebug("Going to pose %s", straightP.toString().c_str());
+                        igaze->lookAtFixationPoint(straightP);
+                        lookLeft=true;
+                    }                    
+                }
+                
+
           }   
-          /*  if (t-t2> 3.0)
-            {
-                if (!lookRight)
-                {
-                    yarp::sig::Vector vecRight;
-                    for (int i=2; i< eyes.size(); i++)
-                        vecRight.push_back(eyes.get(i).asDouble());
 
-                    vecRight
-                    
-                    yDebug("LOOKING AT: %s", vecRight.toString(2,2).c_str());
-                    igaze->lookAtMonoPixelWithVergence(0, vecRight, 10.0);
-                    lookRight=true;
-                }
-            }*/
            
             if (t-t2> 4.5)
             {
@@ -400,30 +488,151 @@ public:
         if ( state == STATE_SCREEN)
         {
             if (!actionDone)
-            {
-                yDebug("lookAtFixationPoint SCREEN");
-                yDebug("Going to pose %s", leftP.toString().c_str());
-                igaze->lookAtFixationPoint(leftP);
+            {   
+                if (tokens[1].compare("Left")==0)
+                {
+                    yDebug("Time is %lf - switching state", t-t2 );
+                    yDebug("lookAtFixationPoint SCREEN");
+                    yDebug("Going to pose %s", leftP.toString().c_str());
+                    igaze->lookAtFixationPoint(leftP);
+                    actionDone = true;
+                }
+                else
+                {
+                    yDebug("Time is %lf - switching state", t-t2 );
+                    yDebug("lookAtFixationPoint SCREEN");
+                    yDebug("Going to pose %s", rightP.toString().c_str());
+                    igaze->lookAtFixationPoint(rightP);
+                    actionDone = true;
+                }
             }
             
-            if (t-t2> 1.0)
+            if (t-t2> 6.0)
             {
                 yDebug("Time is %lf - switching state", t-t2 );
-                state = STATE_WAIT;
-            }
+                yarp::os::Bottle rpcCmd;
+                rpcCmd.addString(tokens[2]);
+                rpcCmd.addString(tokens[3]);
+                yDebug("Sending message... %s\n", rpcCmd.toString().c_str());
+                yarp::os::Bottle response;
+                rpcPort.write(rpcCmd,response);
+                yDebug("Got response: %s\n", response.toString().c_str());                
+                state = STATE_RESPONSE;
+                actionDone = false;
+            }  
+         
+      }
+      if ( state == STATE_RESPONSE)
+      {
+
+               // struct input_event ie;
+                //unsigned char *ptr = (unsigned char*)&ie;
+                //unsigned char button,bLeft,bRight;
+                //int button;
+                int bLeft, middle, bRight;
+                signed char x, y;
+                int fd;
+                unsigned char button[3];
+                //mouse event         
+                if ((fd = open(MOUSEFILE, O_RDONLY)) == -1) 
+                {
+                yDebug("Cannot access mouse device");
+                exit(EXIT_FAILURE);
+                }  
+                     
+               //  yDebug("Time is %lf before reading the mouse", t-t2 );
+               //  int x = read(fd, &ie, sizeof(struct input_event));
+               //  yDebug("Time is %d mouse response", fd );
+               //  yDebug("Time is %lf after reading the mouse", t-t2 );
+               while(read(fd, button, sizeof(button)))
+                {  
+                   
+                    yDebug("Pressed %d", button[0]);                
+                    bLeft = button[0] & 0x1;     
+                    bRight = button[0] & 0x2;
+                     x = button[1];
+                     y = button[2];
+                     yDebug("x=%d, y=%d, left=%d, middle=%d, right=%d\n", x, y, bLeft, middle, bRight);
+ 
+                    if (bRight==2)
+                    {
+                        int i=read(fd, button, sizeof(button));
+                        bLeft = button[0] & 0x1;     
+                        bRight = button[0] & 0x2;
+                        x = button[1];
+                        y = button[2];
+                        yDebug("x=%d, y=%d, left=%d, middle=%d, right=%d\n", x, y, bLeft, middle, bRight);
+
+                        yDebug("In still screen time");
+                        yDebug("Time is %lf - switching state", t-t2 );
+                        std::cout<<"right"<<std::endl;
+                        yDebug("In still state time");
+                        actionDone=false;
+                        tokens.clear();
+                        t=yarp::os::Time::now();                     
+                        t1=t2=t3=t;  
+                        bRight=0;
+                        yDebug("Time is %lf - switching state", t-t2 );   
+                        results << num.toString().c_str() << ", "<< tokens[0] << ", " << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"right"<<std::endl;                  
+                        state = STATE_INITIAL;
+                        close(fd);                       
+                        
+                        break;
+                    }
+                    if (bLeft==1)
+                    {
+                        int i = read(fd, button, sizeof(button));
+                        bLeft = button[0] & 0x1;     
+                        bRight = button[0] & 0x2;
+                        x = button[1];
+                        y = button[2];
+                        yDebug("x=%d, y=%d, left=%d, middle=%d, right=%d\n", x, y, bLeft, middle, bRight);
+
+
+
+                        yDebug("In still screen time");
+                        yDebug("Time is %lf - switching state", t-t2 );
+                        std::cout<<"left"<<std::endl;
+                        yDebug("In still state time");                      
+                        
+                        actionDone=false;
+                        tokens.clear();
+                        t=yarp::os::Time::now();   
+                        t1=t2=t3=t;
+                        
+                         bLeft=0;
+                        yDebug("Time is %lf - switching state", t-t2 );   
+                        
+                        results << num.toString().c_str() << ", "<< tokens[0] << ", "  << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"left"<<std::endl;                                            
+                        close(fd);
+                        state = STATE_INITIAL;                   
+
+
+                        break;
+                    }          
+                   
+                    fflush(stdout);
+                    
+                 }     
+            
+           // if (t-t2> 1.0)
+           // {
+               // yDebug("Time is %lf - switching state", t-t2 );
+               // state = STATE_WAIT;
+            //}
         }
         
-        if ( state == STATE_WAIT)
-        {
-            yDebug("IN STATE WAIT");
+       // if ( state == STATE_WAIT)
+       // {
+          //  yDebug("IN STATE WAIT");
             
-            if (t-t2> STILL_STATE_TIME)
-            {
-                yDebug("In still state time");
-                t1=t2=t3=t;
+           // if (t-t2> STILL_STATE_TIME)
+           // {
+              //  yDebug("In still state time");
+             //   t1=t2=t3=t;
                 //state = STATE_INITIAL;
-            }
-        }
+            //}
+       // }
     }
 
     /********************************************************/
@@ -437,6 +646,7 @@ public:
         clientTorso.close();
         faceEmotion.interrupt();
         faceEmotion.close();
+        results.close();   
     }
     
     /********************************************************/

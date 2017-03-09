@@ -83,7 +83,7 @@ class Finder : public yarp::os::RFModule,
 
         if(! firstImage.data || ! secondImage.data)
         {
-            yError() <<"Could not open or find one or both imaged ";
+            yError() <<"Could not open or find one or both images ";
             mutex.unlock();
             return false;
         }

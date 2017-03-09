@@ -10,12 +10,12 @@
     </module>
     <module>
         <name>yarpview</name>
-        <node>left-screen</node>
+        <node>localhost</node>
         <parameters>--name /screenLeft --RefreshTime 33 </parameters>
     </module>
     <module>
         <name>yarpview</name>
-        <node>right-screen</node>
+        <node>localhost</node>
         <parameters>--name /screenRight --RefreshTime 33 </parameters>
     </module>
 
