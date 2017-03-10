@@ -47,6 +47,7 @@
 #include <unistd.h>
 #include <iostream>
 #include <fstream>
+#include <locale>
 
 #define MOUSEFILE "/dev/input/mice"
 
@@ -539,8 +540,14 @@ public:
             {
                 yDebug("Time is %lf - switching state", t-t2 );
                 yarp::os::Bottle rpcCmd;
-                rpcCmd.addString(tokens[2]);
-                rpcCmd.addString(tokens[3]);
+                std::locale loc;
+                
+                tokens[2][0] = std::tolower(tokens[2][0],loc);
+                std::string stringImage = tokens[2];
+                rpcCmd.addString(stringImage);
+
+                std::string letterImage = "letter" + tokens[3] + ".jpg";
+                rpcCmd.addString(letterImage);
                 yDebug("Sending message... %s\n", rpcCmd.toString().c_str());
                 yarp::os::Bottle response;
                 rpcPort.write(rpcCmd,response);
