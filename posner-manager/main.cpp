@@ -252,6 +252,7 @@ public:
         
         //get info from config file
         std::string moduleName = rf.check("name", yarp::os::Value("posner-manager"), "module name (string)").asString();
+        std::string participantNumber = rf.check("participant", yarp::os::Value("p0"), "participant num").asString();
         robotName = rf.check("robot", yarp::os::Value("icubSim"), "robot name (string)").asString();
         
         yarp::os::Bottle *restPos = rf.findGroup("head-positions").find("rest_position").asList();
@@ -286,9 +287,14 @@ public:
         
         //you have to change this number depending on the number of the participant
         num.addInt(1);
-        results.open("PartcipantsResults.csv");
+        //std::string participantID ="1";
+
+        yInfo("Particpantid %s", participantNumber.c_str());
+        std::string Filename="PartcipantsResults" + participantNumber + ".csv";
+        results.open(Filename.c_str());
         results << "Partcipant"<< ", "<< "InteractionMode" <<", "<< "RobotScreen" << ", " << "LetterScreen" << ", " <<"Letter"<< ", " <<"PressButton"<<std::endl;  
        
+      
         yDebug("public");
 
     }
@@ -342,8 +348,30 @@ public:
         actionDone = false;
         lookLeft = false;
         lookRight = false;
-        ConditionId =0;     
-        return true;
+        ConditionId =0; 
+        yarp::os::Bottle resImage;
+        yarp::os::Bottle imagLoad;
+        imagLoad.addString("load");
+        imagLoad.addString("letterF.jpg");
+        imagLoad.addString("letterT.jpg");
+        bool returnValue=true;
+        rpcPort.write(imagLoad,resImage);
+
+        yDebug("Sendimg loading images %s", imagLoad.toString().c_str());
+        yDebug("Receiving loading images %s", resImage.toString().c_str());
+        std::string CheckResImage;
+        CheckResImage =  resImage.toString();
+        yInfo("CheckResImage is %s ",CheckResImage.c_str());
+        if (CheckResImage.compare("[ok]")==0)
+            yInfo("Images loaded ok");
+          
+        else
+        {
+            yInfo("Problem loading images");
+            returnValue=false;
+        }
+           
+        return returnValue;
     }
 
     /********************************************************/
