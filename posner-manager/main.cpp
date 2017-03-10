@@ -109,15 +109,15 @@ public:
         mutex.lock();
         yarp::os::Bottle eyes;
         
-       // eyes.addInt(rightEyeX);
-      //  eyes.addInt(rightEyeY);
-      //  eyes.addInt(leftEyeX);
-       // eyes.addInt(leftEyeY);
+        eyes.addInt(rightEyeX);
+        eyes.addInt(rightEyeY);
+        eyes.addInt(leftEyeX);
+        eyes.addInt(leftEyeY);
         
-        eyes.addInt(100);
-        eyes.addInt(120);
-        eyes.addInt(220);
-        eyes.addInt(120);
+       // eyes.addInt(100);
+       // eyes.addInt(120);
+       // eyes.addInt(220);
+       // eyes.addInt(120);
         
         //yDebug("EYES %s", eyes.toString().c_str());
         mutex.unlock();
@@ -393,14 +393,14 @@ public:
             threadRelease();
 
         t=yarp::os::Time::now();
-        yDebug("Time is %lf", t-t2 );
+  //      yDebug("Time is %lf", t-t2 );
         if (state == STATE_INITIAL)
         {
-            yDebug("IN STATE INITIAL");
+   //         yDebug("IN STATE INITIAL");
            
             if (!actionDone)
             {
-                yDebug("CLOSING EYES");
+    //            yDebug("CLOSING EYES");
                 //close eyes
                 yarp::os::Bottle cmd;
                 cmd.clear();
@@ -409,7 +409,7 @@ public:
                 cmd.addString("sad");
                 faceEmotion.write(cmd);
                 
-                yDebug("Going to pose %s", restP.toString().c_str());
+      //          yDebug("Going to pose %s", restP.toString().c_str());
                 //go to rest position
                 igaze->lookAtFixationPoint(restP);
                 actionDone = true;
@@ -433,7 +433,7 @@ public:
                 std::cout<<tokens[1]<<std::endl;
                 std::cout<<tokens[2]<<std::endl;
                 std::cout<<tokens[3]<<std::endl; 
-                yDebug("Time is %lf - switching state", t-t2 );
+        //        yDebug("Time is %lf - switching state", t-t2 );
                 state = STATE_INTERACT;
                 actionDone = false;  
             }
@@ -443,10 +443,10 @@ public:
         
         if ( state == STATE_INTERACT)
         {
-            yDebug("IN STATE INTERACTION MODE");
+        //    yDebug("IN STATE INTERACTION MODE");
             if (!actionDone)
             {
-                yDebug("OPEINING EYES");
+        //        yDebug("OPENING EYES");
                 //open eyes
                 yarp::os::Bottle cmd;
                 cmd.clear();
@@ -455,7 +455,7 @@ public:
                 cmd.addString("hap");
                 faceEmotion.write(cmd);
                 
-                yDebug("Going to pose %s", straightP.toString().c_str());
+                //yDebug("Going to pose %s", straightP.toString().c_str());
                 igaze->lookAtFixationPoint(straightP);
                 
                 actionDone = true;
@@ -465,9 +465,9 @@ public:
                 
             yarp::os::Bottle eyes = process.getEyes();
             
-            yDebug("Time is %lf", t-t2 );
+        //    yDebug("Time is %lf", t-t2 );
             
-            yDebug("EYES AT: %s", eyes.toString().c_str());            
+            //yDebug("EYES AT: %s", eyes.toString().c_str());            
 
 
             if (t-t2> 3.0)
@@ -479,14 +479,14 @@ public:
                     if (!lookLeft)
                     {
                         yarp::sig::Vector vecLeft;
-                        yDebug("EYES AT: %s", eyes.toString().c_str());
+                        yDebug("WILL LOOK AT EYES AT: %s", eyes.toString().c_str());
                         
                         for (int i=0; i< eyes.size()/2; i++)
                             vecLeft.push_back(eyes.get(i).asDouble());
 
                         vecLeft[1] = vecLeft[1] + 15;
 
-                        yDebug("LOOKING AT: %s", vecLeft.toString(2,2).c_str());
+                        //yDebug("LOOKING AT: %s", vecLeft.toString(2,2).c_str());
                         igaze->lookAtMonoPixelWithVergence(0, vecLeft, 10.0);
                         lookLeft=true;
                     }
@@ -508,9 +508,10 @@ public:
            
             if (t-t2> 4.5)
             {
-                yDebug("Time is %lf - switching state", t-t2 );
+          //      yDebug("Time is %lf - switching state", t-t2 );
                 state = STATE_SCREEN;
                 actionDone = false;
+                lookLeft = false;
             }
         }
         
@@ -520,17 +521,17 @@ public:
             {   
                 if (tokens[1].compare("Left")==0)
                 {
-                    yDebug("Time is %lf - switching state", t-t2 );
-                    yDebug("lookAtFixationPoint SCREEN");
-                    yDebug("Going to pose %s", leftP.toString().c_str());
+                    //yDebug("Time is %lf - switching state", t-t2 );
+                    //yDebug("lookAtFixationPoint SCREEN");
+                    //yDebug("Going to pose %s", leftP.toString().c_str());
                     igaze->lookAtFixationPoint(leftP);
                     actionDone = true;
                 }
                 else
                 {
-                    yDebug("Time is %lf - switching state", t-t2 );
-                    yDebug("lookAtFixationPoint SCREEN");
-                    yDebug("Going to pose %s", rightP.toString().c_str());
+                    //yDebug("Time is %lf - switching state", t-t2 );
+                    //yDebug("lookAtFixationPoint SCREEN");
+                    //yDebug("Going to pose %s", rightP.toString().c_str());
                     igaze->lookAtFixationPoint(rightP);
                     actionDone = true;
                 }
@@ -538,23 +539,36 @@ public:
             
             if (t-t2> 6.0)
             {
-                yDebug("Time is %lf - switching state", t-t2 );
+                //yDebug("Time is %lf - switching state", t-t2 );
                 yarp::os::Bottle rpcCmd;
                 std::locale loc;
                 
                 tokens[2][0] = std::tolower(tokens[2][0],loc);
                 std::string stringImage = tokens[2];
+
+                rpcCmd.addString("display");
                 rpcCmd.addString(stringImage);
 
                 std::string letterImage = "letter" + tokens[3] + ".jpg";
                 rpcCmd.addString(letterImage);
-                yDebug("Sending message... %s\n", rpcCmd.toString().c_str());
+                //yDebug("Sending message... %s\n", rpcCmd.toString().c_str());
                 yarp::os::Bottle response;
                 rpcPort.write(rpcCmd,response);
-                yDebug("Got response: %s\n", response.toString().c_str());                
-                state = STATE_RESPONSE;
-                actionDone = false;
+                //yDebug("Got response: %s\n", response.toString().c_str());   
+                
+                actionDone = false;   
+                          
+                
             }  
+
+            if (t-t2> 6.2)
+            {
+                state = STATE_RESPONSE;
+                yarp::os::Bottle cmd, resp;
+                cmd.addString("resetImages");
+                rpcPort.write(cmd,resp);
+               
+            }       
          
       }
       if ( state == STATE_RESPONSE)
@@ -587,7 +601,7 @@ public:
                     bRight = button[0] & 0x2;
                      x = button[1];
                      y = button[2];
-                     yDebug("x=%d, y=%d, left=%d, middle=%d, right=%d\n", x, y, bLeft, middle, bRight);
+ //                    yDebug("x=%d, y=%d, left=%d, middle=%d, right=%d\n", x, y, bLeft, middle, bRight);
  
                     if (bRight==2)
                     {
@@ -596,18 +610,18 @@ public:
                         bRight = button[0] & 0x2;
                         x = button[1];
                         y = button[2];
-                        yDebug("x=%d, y=%d, left=%d, middle=%d, right=%d\n", x, y, bLeft, middle, bRight);
+                        //yDebug("x=%d, y=%d, left=%d, middle=%d, right=%d\n", x, y, bLeft, middle, bRight);
 
-                        yDebug("In still screen time");
-                        yDebug("Time is %lf - switching state", t-t2 );
-                        std::cout<<"right"<<std::endl;
-                        yDebug("In still state time");
+                       // yDebug("In still screen time");
+                       // yDebug("Time is %lf - switching state", t-t2 );
+                       // yDebug(" MOUSE right");
+                       /// yDebug("In still state time");
                         actionDone=false;
                         tokens.clear();
                         t=yarp::os::Time::now();                     
                         t1=t2=t3=t;  
                         bRight=0;
-                        yDebug("Time is %lf - switching state", t-t2 );   
+                       // yDebug("Time is %lf - switching state", t-t2 );   
                         results << num.toString().c_str() << ", "<< tokens[0] << ", " << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"right"<<std::endl;                  
                         state = STATE_INITIAL;
                         close(fd);                       
@@ -621,14 +635,14 @@ public:
                         bRight = button[0] & 0x2;
                         x = button[1];
                         y = button[2];
-                        yDebug("x=%d, y=%d, left=%d, middle=%d, right=%d\n", x, y, bLeft, middle, bRight);
+                     //   yDebug("x=%d, y=%d, left=%d, middle=%d, right=%d\n", x, y, bLeft, middle, bRight);
 
 
 
-                        yDebug("In still screen time");
-                        yDebug("Time is %lf - switching state", t-t2 );
-                        std::cout<<"left"<<std::endl;
-                        yDebug("In still state time");                      
+                     //   yDebug("In still screen time");
+                     //   yDebug("Time is %lf - switching state", t-t2 );
+                        yDebug("MOUSE left");
+                    //    yDebug("In still state time");                      
                         
                         actionDone=false;
                         tokens.clear();
@@ -636,7 +650,7 @@ public:
                         t1=t2=t3=t;
                         
                          bLeft=0;
-                        yDebug("Time is %lf - switching state", t-t2 );   
+                  //      yDebug("Time is %lf - switching state", t-t2 );   
                         
                         results << num.toString().c_str() << ", "<< tokens[0] << ", "  << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"left"<<std::endl;                                            
                         close(fd);
@@ -646,7 +660,7 @@ public:
                         break;
                     }          
                    
-                    fflush(stdout);
+                   // fflush(stdout);
                     
                  }     
             
@@ -668,6 +682,7 @@ public:
                 //state = STATE_INITIAL;
             //}
        // }
+
     }
 
     /********************************************************/
