@@ -216,6 +216,7 @@ protected:
     
     std::vector<std::string> tokens; // Create vector to hold our words
     std::ofstream results;
+    std::ifstream ifile;
 
     //Variable initialization used later to detect mouse events
     int bLeft, middle, bRight;
@@ -293,14 +294,25 @@ public:
 
         yarp::os::Network::connect("/posner-manager/rpc", "/screen-handler/rpc");
         
-       
+      
         
         yInfo("Particpantid %s", participantNumber.c_str());
         std::string Filename="PartcipantsResults" + participantNumber + ".csv";
-        results.open(Filename.c_str(), std::ofstream::app);
-        //results.open(Filename.c_str());
-        results << "Participant"<< ", "<< "InteractionMode" <<", "<< "RobotScreen" << ", " << "LetterScreen" << ", " <<"Letter"<< ", " <<"PressButton"<<", " <<"ReactionTime"<<std::endl;  
-       
+        ifile.open(Filename.c_str());
+        if (ifile) 
+        {  
+           ifile.close();
+           results.open(Filename.c_str(), std::ofstream::app);
+            
+        }
+        else
+        {  
+           ifile.close();
+           results.open(Filename.c_str(), std::ofstream::app);
+           results << "Participant"<< ", "<< "InteractionMode" <<", "<< "RobotScreen" << ", " << "LetterScreen" << ", " <<"Letter"<< ", " <<"PressButton"<<", " <<"ReactionTime"<<std::endl;  
+               
+        }
+        
       
         yDebug("public");
 
