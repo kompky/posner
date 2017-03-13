@@ -41,7 +41,7 @@
 #include <vector>
 #include <sstream>
 
-#include <stdlib.h>
+#include <stdlib.h> //atoi
 #include <fcntl.h>
 #include <linux/input.h>
 #include <unistd.h>
@@ -208,8 +208,8 @@ protected:
     bool lookLeft;
     bool lookRight;
 
+    std::string Condition_Id;
     int ConditionId;
-
     yarp::os::Bottle num;
     //Variable initialization used later to insert each rwo condition string and isolate difefrent words (e. interact, left, right)
     std::string buf; // Have a buffer string
@@ -258,8 +258,10 @@ public:
         
         //get info from config file
         std::string moduleName = rf.check("name", yarp::os::Value("posner-manager"), "module name (string)").asString();
-        participantNumber = rf.check("participant", yarp::os::Value("p0"), "participant num").asString();
         robotName = rf.check("robot", yarp::os::Value("icubSim"), "robot name (string)").asString();
+        participantNumber = rf.check("participant", yarp::os::Value("p0"), "participant num").asString();
+        Condition_Id = rf.check("condition", yarp::os::Value("0"), "condition id").asString();
+        
         
         yarp::os::Bottle *restPos = rf.findGroup("head-positions").find("rest_position").asList();
         yarp::os::Bottle *downPos = rf.findGroup("head-positions").find("down_position").asList();
@@ -295,8 +297,8 @@ public:
         
         yInfo("Particpantid %s", participantNumber.c_str());
         std::string Filename="PartcipantsResults" + participantNumber + ".csv";
-        //results.open(Filename.c_str(), std::ofstream::app);
-        results.open(Filename.c_str());
+        results.open(Filename.c_str(), std::ofstream::app);
+        //results.open(Filename.c_str());
         results << "Participant"<< ", "<< "InteractionMode" <<", "<< "RobotScreen" << ", " << "LetterScreen" << ", " <<"Letter"<< ", " <<"PressButton"<<", " <<"ReactionTime"<<std::endl;  
        
       
@@ -353,7 +355,11 @@ public:
         actionDone = false;
         lookLeft = false;
         lookRight = false;
-        ConditionId =0; 
+        //ConditionId =10; 
+        
+
+        ConditionId = std::atoi (Condition_Id.c_str());
+        yDebug("Condition id %d", ConditionId);
         yarp::os::Bottle resImage;
         yarp::os::Bottle imagLoad;
         imagLoad.addString("load");
@@ -602,7 +608,7 @@ public:
 
                     while(read(fd, button, sizeof(button))!=-1)
                     {  
-                        yDebug("Reaction Time is %lf ", yarp::os::Time::now()-t5);
+                        double rt= yarp::os::Time::now()-t5;
                         yDebug("Pressed %d", button[0]);                
                         bLeft = button[0] & 0x1;     
                         bRight = button[0] & 0x2;
@@ -616,8 +622,8 @@ public:
                             int i=read(fd, button, sizeof(button));
                             //double diff = (yarp::os::Time::now()-t5);
                             //yDebug("x=%d, y=%d, left=%d, middle=%d, right=%d\n", x, y, bLeft, middle, bRight);
-                            reactionTime.addDouble(yarp::os::Time::now()-t5);
-                            yDebug("Reaction Time is %lf ", yarp::os::Time::now()-t5);
+                            reactionTime.addDouble(rt);
+                            yDebug("Reaction Time is %lf ", rt);
                             yDebug("reaction time Bottle: %s",reactionTime.toString().c_str() );
                             yDebug("MOUSE right"); 
                             actionDone=false;
@@ -638,8 +644,8 @@ public:
                         if (bLeft==1)
                         {
                             int i = read(fd, button, sizeof(button));                           
-                            reactionTime.addDouble(yarp::os::Time::now()-t5);
-                            yDebug("Reaction Time is %lf ", yarp::os::Time::now()-t5);
+                            reactionTime.addDouble(rt);
+                            yDebug("Reaction Time is %lf ", rt);
                             yDebug("reaction time Bottle: %s",reactionTime.toString().c_str() ); 
                             yDebug("MOUSE left");                          
                             actionDone=false;
