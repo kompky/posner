@@ -108,17 +108,22 @@ public:
     {
         mutex.lock();
         yarp::os::Bottle eyes;
-        
-        eyes.addInt(rightEyeX);
-        eyes.addInt(rightEyeY);
-        eyes.addInt(leftEyeX);
-        eyes.addInt(leftEyeY);
-        
-       // eyes.addInt(100);
-        //eyes.addInt(120);
-       // eyes.addInt(220);
-        //eyes.addInt(120);
-        
+       
+        if (this->getOutputCount()>0)
+        {
+            eyes.addInt(rightEyeX);
+            eyes.addInt(rightEyeY);
+            eyes.addInt(leftEyeX);
+            eyes.addInt(leftEyeY);
+        }
+        else
+        {
+            eyes.addInt(100);
+            eyes.addInt(120);
+            eyes.addInt(220);
+            eyes.addInt(120);
+        }
+
         //yDebug("EYES %s", eyes.toString().c_str());
         mutex.unlock();
         
