@@ -208,7 +208,7 @@ protected:
     bool lookLeft;
     bool lookRight;
 
-    std::string Condition_Id;
+    
     int ConditionId;
     yarp::os::Bottle num;
     //Variable initialization used later to insert each rwo condition string and isolate difefrent words (e. interact, left, right)
@@ -260,7 +260,7 @@ public:
         std::string moduleName = rf.check("name", yarp::os::Value("posner-manager"), "module name (string)").asString();
         robotName = rf.check("robot", yarp::os::Value("icubSim"), "robot name (string)").asString();
         participantNumber = rf.check("participant", yarp::os::Value("p0"), "participant num").asString();
-        Condition_Id = rf.check("condition", yarp::os::Value("0"), "condition id").asString();
+        ConditionId = rf.check("condition", yarp::os::Value(0), "condition id").asInt();
         
         
         yarp::os::Bottle *restPos = rf.findGroup("head-positions").find("rest_position").asList();
@@ -355,11 +355,11 @@ public:
         actionDone = false;
         lookLeft = false;
         lookRight = false;
-        //ConditionId =10; 
-        
+       
 
-        ConditionId = std::atoi (Condition_Id.c_str());
+       
         yDebug("Condition id %d", ConditionId);
+        
         yarp::os::Bottle resImage;
         yarp::os::Bottle imagLoad;
         imagLoad.addString("load");
