@@ -109,15 +109,15 @@ public:
         mutex.lock();
         yarp::os::Bottle eyes;
         
-        eyes.addInt(rightEyeX);
-        eyes.addInt(rightEyeY);
-        eyes.addInt(leftEyeX);
-        eyes.addInt(leftEyeY);
+        //eyes.addInt(rightEyeX);
+        //eyes.addInt(rightEyeY);
+        //eyes.addInt(leftEyeX);
+        //eyes.addInt(leftEyeY);
         
-       // eyes.addInt(100);
-       // eyes.addInt(120);
-       // eyes.addInt(220);
-       // eyes.addInt(120);
+        eyes.addInt(100);
+        eyes.addInt(120);
+        eyes.addInt(220);
+        eyes.addInt(120);
         
         //yDebug("EYES %s", eyes.toString().c_str());
         mutex.unlock();
@@ -201,6 +201,8 @@ protected:
     double t2;
     double t3;
     double t4;
+    double t5;
+    double t6;
     
     bool actionDone;
     bool lookLeft;
@@ -216,10 +218,13 @@ protected:
     std::ofstream results;
 
     //Variable initialization used later to detect mouse events
-    //int fd;
-    
+    int bLeft, middle, bRight;
+    signed char x, y;
+    int fd;
+    unsigned char button[3];
 
-
+    yarp::os::Bottle reactionTime;
+    std::string participantNumber;
 
     /********************************************************/
     virtual void gazeEventCallback()
@@ -253,7 +258,7 @@ public:
         
         //get info from config file
         std::string moduleName = rf.check("name", yarp::os::Value("posner-manager"), "module name (string)").asString();
-        std::string participantNumber = rf.check("participant", yarp::os::Value("p0"), "participant num").asString();
+        participantNumber = rf.check("participant", yarp::os::Value("p0"), "participant num").asString();
         robotName = rf.check("robot", yarp::os::Value("icubSim"), "robot name (string)").asString();
         
         yarp::os::Bottle *restPos = rf.findGroup("head-positions").find("rest_position").asList();
@@ -286,14 +291,13 @@ public:
 
         yarp::os::Network::connect("/posner-manager/rpc", "/screen-handler/rpc");
         
-        //you have to change this number depending on the number of the participant
-        num.addInt(1);
-        //std::string participantID ="1";
-
+       
+        
         yInfo("Particpantid %s", participantNumber.c_str());
         std::string Filename="PartcipantsResults" + participantNumber + ".csv";
+        //results.open(Filename.c_str(), std::ofstream::app);
         results.open(Filename.c_str());
-        results << "Partcipant"<< ", "<< "InteractionMode" <<", "<< "RobotScreen" << ", " << "LetterScreen" << ", " <<"Letter"<< ", " <<"PressButton"<<std::endl;  
+        results << "Participant"<< ", "<< "InteractionMode" <<", "<< "RobotScreen" << ", " << "LetterScreen" << ", " <<"Letter"<< ", " <<"PressButton"<<", " <<"ReactionTime"<<std::endl;  
        
       
         yDebug("public");
@@ -393,7 +397,7 @@ public:
             threadRelease();
 
         t=yarp::os::Time::now();
-  //      yDebug("Time is %lf", t-t2 );
+      //  yDebug("Time is %lf", t-t2 );
         if (state == STATE_INITIAL)
         {
    //         yDebug("IN STATE INITIAL");
@@ -560,9 +564,11 @@ public:
                           
                 
             }  
-
+            
+            
             if (t-t2> 6.2)
-            {
+            {   
+                t6 = yarp::os::Time::now();
                 state = STATE_RESPONSE;
                 yarp::os::Bottle cmd, resp;
                 cmd.addString("resetImages");
@@ -572,16 +578,13 @@ public:
          
       }
       if ( state == STATE_RESPONSE)
-      {
+      {         
 
                // struct input_event ie;
                 //unsigned char *ptr = (unsigned char*)&ie;
                 //unsigned char button,bLeft,bRight;
                 //int button;
-                int bLeft, middle, bRight;
-                signed char x, y;
-                int fd;
-                unsigned char button[3];
+                
                 //mouse event         
                 if ((fd = open(MOUSEFILE, O_RDONLY)) == -1) 
                 {
@@ -593,76 +596,71 @@ public:
                //  int x = read(fd, &ie, sizeof(struct input_event));
                //  yDebug("Time is %d mouse response", fd );
                //  yDebug("Time is %lf after reading the mouse", t-t2 );
-               while(read(fd, button, sizeof(button)))
-                {  
-                   
-                    yDebug("Pressed %d", button[0]);                
-                    bLeft = button[0] & 0x1;     
-                    bRight = button[0] & 0x2;
-                     x = button[1];
-                     y = button[2];
- //                    yDebug("x=%d, y=%d, left=%d, middle=%d, right=%d\n", x, y, bLeft, middle, bRight);
- 
-                    if (bRight==2)
-                    {
-                        int i=read(fd, button, sizeof(button));
+               t5 = yarp::os::Time::now();             
+              // yDebug("Time between letter appearance and response %lf ", yarp::os::Time::now()-t6);
+                //yDebug("RESPONSE");
+
+                    while(read(fd, button, sizeof(button))!=-1)
+                    {  
+                        yDebug("Reaction Time is %lf ", yarp::os::Time::now()-t5);
+                        yDebug("Pressed %d", button[0]);                
                         bLeft = button[0] & 0x1;     
                         bRight = button[0] & 0x2;
-                        x = button[1];
-                        y = button[2];
-                        //yDebug("x=%d, y=%d, left=%d, middle=%d, right=%d\n", x, y, bLeft, middle, bRight);
-
-                       // yDebug("In still screen time");
-                       // yDebug("Time is %lf - switching state", t-t2 );
-                       // yDebug(" MOUSE right");
-                       /// yDebug("In still state time");
-                        actionDone=false;
-                        tokens.clear();
-                        t=yarp::os::Time::now();                     
-                        t1=t2=t3=t;  
-                        bRight=0;
-                       // yDebug("Time is %lf - switching state", t-t2 );   
-                        results << num.toString().c_str() << ", "<< tokens[0] << ", " << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"right"<<std::endl;                  
-                        state = STATE_INITIAL;
-                        close(fd);                       
+                         x = button[1];
+                         y = button[2];
+                         yDebug("x=%d, y=%d, left=%d, middle=%d, right=%d\n", x, y, bLeft, middle, bRight);
                         
-                        break;
-                    }
-                    if (bLeft==1)
-                    {
-                        int i = read(fd, button, sizeof(button));
-                        bLeft = button[0] & 0x1;     
-                        bRight = button[0] & 0x2;
-                        x = button[1];
-                        y = button[2];
-                     //   yDebug("x=%d, y=%d, left=%d, middle=%d, right=%d\n", x, y, bLeft, middle, bRight);
+                        if (bRight==2)
+                        {   
+                            
+                            int i=read(fd, button, sizeof(button));
+                            //double diff = (yarp::os::Time::now()-t5);
+                            //yDebug("x=%d, y=%d, left=%d, middle=%d, right=%d\n", x, y, bLeft, middle, bRight);
+                            reactionTime.addDouble(yarp::os::Time::now()-t5);
+                            yDebug("Reaction Time is %lf ", yarp::os::Time::now()-t5);
+                            yDebug("reaction time Bottle: %s",reactionTime.toString().c_str() );
+                            yDebug("MOUSE right"); 
+                            actionDone=false;
+                            tokens.clear();
+                            
+                            t=yarp::os::Time::now();                     
+                            t1=t2=t3=t;  
+                            bRight=0;                          
+                            results << participantNumber.c_str() << ", "<< tokens[0] << ", " << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"right"<<","<<reactionTime.toString().c_str()<<std::endl;                  
+                            
+                            close(fd); 
+                            reactionTime.clear();
+                            state = STATE_INITIAL;
+                                                  
+                            
+                            break;
+                        }
+                        if (bLeft==1)
+                        {
+                            int i = read(fd, button, sizeof(button));                           
+                            reactionTime.addDouble(yarp::os::Time::now()-t5);
+                            yDebug("Reaction Time is %lf ", yarp::os::Time::now()-t5);
+                            yDebug("reaction time Bottle: %s",reactionTime.toString().c_str() ); 
+                            yDebug("MOUSE left");                          
+                            actionDone=false;
+                            tokens.clear();
+                            
+                            t=yarp::os::Time::now();   
+                            t1=t2=t3=t;                            
+                            bLeft=0;                
+                            results << participantNumber.c_str() << ", "<< tokens[0] << ", "  << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"left"<<","<<reactionTime.toString().c_str()<<std::endl;                                            
+                            close(fd);
+                            reactionTime.clear();
+                            state = STATE_INITIAL;                   
 
 
-
-                     //   yDebug("In still screen time");
-                     //   yDebug("Time is %lf - switching state", t-t2 );
-                        yDebug("MOUSE left");
-                    //    yDebug("In still state time");                      
-                        
-                        actionDone=false;
-                        tokens.clear();
-                        t=yarp::os::Time::now();   
-                        t1=t2=t3=t;
-                        
-                         bLeft=0;
-                  //      yDebug("Time is %lf - switching state", t-t2 );   
-                        
-                        results << num.toString().c_str() << ", "<< tokens[0] << ", "  << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"left"<<std::endl;                                            
-                        close(fd);
-                        state = STATE_INITIAL;                   
-
-
-                        break;
-                    }          
+                            break;
+                        }          
                    
-                   // fflush(stdout);
+                    //fflush(stdout);
                     
-                 }     
+                    }     
+            
             
            // if (t-t2> 1.0)
            // {
