@@ -109,15 +109,15 @@ public:
         mutex.lock();
         yarp::os::Bottle eyes;
         
-        //eyes.addInt(rightEyeX);
-        //eyes.addInt(rightEyeY);
-        //eyes.addInt(leftEyeX);
-        //eyes.addInt(leftEyeY);
+        eyes.addInt(rightEyeX);
+        eyes.addInt(rightEyeY);
+        eyes.addInt(leftEyeX);
+        eyes.addInt(leftEyeY);
         
-        eyes.addInt(100);
-        eyes.addInt(120);
-        eyes.addInt(220);
-        eyes.addInt(120);
+       // eyes.addInt(100);
+        //eyes.addInt(120);
+       // eyes.addInt(220);
+        //eyes.addInt(120);
         
         //yDebug("EYES %s", eyes.toString().c_str());
         mutex.unlock();
@@ -309,7 +309,7 @@ public:
         {  
            ifile.close();
            results.open(Filename.c_str(), std::ofstream::app);
-           results << "Participant"<< ", "<< "InteractionMode" <<", "<< "RobotScreen" << ", " << "LetterScreen" << ", " <<"Letter"<< ", " <<"PressButton"<<", " <<"ReactionTime"<<std::endl;  
+           results << "Participant"<< ", "<< "ConditionNumber"<<" , "<<"InteractionMode" <<", "<< "RobotScreen" << ", " << "LetterScreen" << ", " <<"Letter"<< ", " <<"PressButton"<<", " <<"ReactionTime"<<std::endl;  
                
         }
         
@@ -477,9 +477,7 @@ public:
                 cmd.addString("hap");
                 faceEmotion.write(cmd);
                 
-                //yDebug("Going to pose %s", straightP.toString().c_str());
-                igaze->lookAtFixationPoint(straightP);
-                
+               
                 actionDone = true;
                 //t2 = t;
             }
@@ -492,14 +490,17 @@ public:
             //yDebug("EYES AT: %s", eyes.toString().c_str());            
 
 
-            if (t-t2> 3.0)
+            if (t-t2> 2.5)
             {   
                 if(tokens[0].compare("Interact")==0)
 
                 {   
                     yDebug("Robot is interacting with human");
                     if (!lookLeft)
-                    {
+                    {    
+                        yDebug("Going to pose %s", straightP.toString().c_str());
+                        igaze->lookAtFixationPoint(straightP);
+                
                         yarp::sig::Vector vecLeft;
                         yDebug("WILL LOOK AT EYES AT: %s", eyes.toString().c_str());
                         
@@ -518,8 +519,8 @@ public:
                     yDebug("Robot is not interacting with human");
                     if (!lookLeft)
                     {
-                        yDebug("Going to pose %s", straightP.toString().c_str());
-                        igaze->lookAtFixationPoint(straightP);
+                        yDebug("Going to pose %s", downP.toString().c_str());
+                        igaze->lookAtFixationPoint(downP);
                         lookLeft=true;
                     }                    
                 }
@@ -644,7 +645,7 @@ public:
                             t=yarp::os::Time::now();                     
                             t1=t2=t3=t;  
                             bRight=0;                          
-                            results << participantNumber.c_str() << ", "<< tokens[0] << ", " << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"right"<<","<<reactionTime.toString().c_str()<<std::endl;                  
+                            results << participantNumber.c_str() << ", "<< ConditionId<<","<<tokens[0] << ", " << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"right"<<","<<reactionTime.toString().c_str()<<std::endl;                  
                             
                             close(fd); 
                             reactionTime.clear();
@@ -666,7 +667,7 @@ public:
                             t=yarp::os::Time::now();   
                             t1=t2=t3=t;                            
                             bLeft=0;                
-                            results << participantNumber.c_str() << ", "<< tokens[0] << ", "  << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"left"<<","<<reactionTime.toString().c_str()<<std::endl;                                            
+                            results << participantNumber.c_str() << ", "<<ConditionId<<","<< tokens[0] << ", "  << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"left"<<","<<reactionTime.toString().c_str()<<std::endl;                                            
                             close(fd);
                             reactionTime.clear();
                             state = STATE_INITIAL;                   
