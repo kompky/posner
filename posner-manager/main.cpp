@@ -109,12 +109,13 @@ public:
         mutex.lock();
         yarp::os::Bottle eyes;
        
-        if (this->getOutputCount()>0)
+        if (this->getInputCount()>0)
         {
-            eyes.addInt(rightEyeX);
-            eyes.addInt(rightEyeY);
-            eyes.addInt(leftEyeX);
-            eyes.addInt(leftEyeY);
+            eyes.addDouble(leftEyeX);
+            eyes.addDouble(leftEyeY);
+            eyes.addDouble(rightEyeX);
+            eyes.addDouble(rightEyeY);
+            
         }
         else
         {
@@ -534,7 +535,7 @@ public:
           }   
 
            
-            if (t-t2> 4.5)
+            if (t-t2> 5.0)
             {
           //      yDebug("Time is %lf - switching state", t-t2 );
                 state = STATE_SCREEN;
