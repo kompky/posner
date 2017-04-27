@@ -22,12 +22,12 @@
     <connection>
         <from>/screen-handler/imageLeft:o</from>
         <to>/screenLeft</to>
-        <protocol>udp</protocol>
+        <protocol>tcp</protocol>
     </connection>
     <connection>
         <from>/screen-handler/imageRight:o</from>
         <to>/screenRight</to>
-        <protocol>udp</protocol>
+        <protocol>tcp</protocol>
     </connection>
 
 </application>

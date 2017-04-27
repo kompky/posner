@@ -36,8 +36,8 @@ class Finder : public yarp::os::RFModule,
 {
     yarp::os::ResourceFinder *rf;
     yarp::os::RpcServer rpcPort;
-    yarp::os::BufferedPort<yarp::sig::ImageOf<yarp::sig::PixelMono> >    imageOutPortLeft;
-    yarp::os::BufferedPort<yarp::sig::ImageOf<yarp::sig::PixelMono> >    imageOutPortRight;
+    yarp::os::BufferedPort<yarp::sig::ImageOf<yarp::sig::PixelRgb> >    imageOutPortLeft;
+    yarp::os::BufferedPort<yarp::sig::ImageOf<yarp::sig::PixelRgb> >    imageOutPortRight;
 
     std::string outImgPortName;
 
@@ -78,8 +78,8 @@ class Finder : public yarp::os::RFModule,
         firstImg  = firstImageStr;
         secondImg = secondImageStr;
 
-        firstImage = cv::imread(imageOneStr, CV_LOAD_IMAGE_GRAYSCALE);
-        secondImage = cv::imread(imageTwoStr, CV_LOAD_IMAGE_GRAYSCALE);
+        firstImage = cv::imread(imageOneStr, CV_LOAD_IMAGE_COLOR);
+        secondImage = cv::imread(imageTwoStr, CV_LOAD_IMAGE_COLOR);
 
         if(! firstImage.data || ! secondImage.data)
         {
@@ -181,13 +181,13 @@ class Finder : public yarp::os::RFModule,
     /********************************************************/
     bool updateModule()
     {
-        yarp::sig::ImageOf<yarp::sig::PixelMono> &outImgLeft  = imageOutPortLeft.prepare();
-        yarp::sig::ImageOf<yarp::sig::PixelMono> &outImgRight  = imageOutPortRight.prepare();
+        yarp::sig::ImageOf<yarp::sig::PixelRgb> &outImgLeft  = imageOutPortLeft.prepare();
+        yarp::sig::ImageOf<yarp::sig::PixelRgb> &outImgRight  = imageOutPortRight.prepare();
 
         if( firstImage.data && secondImage.data)
         {
-            cv::Mat leftImage( firstImage.size(), CV_8UC1, cv::Scalar(0));
-            cv::Mat rightImage(firstImage.size(), CV_8UC1, cv::Scalar(0));
+            cv::Mat leftImage( firstImage.size(), CV_8UC3, cv::Scalar(0,0,0));
+            cv::Mat rightImage(firstImage.size(), CV_8UC3, cv::Scalar(0,0,0));
 
             mutex.lock();
 

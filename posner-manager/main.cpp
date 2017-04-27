@@ -211,11 +211,12 @@ protected:
     double t6;
     
     bool actionDone;
-    bool lookLeft;
+    bool secAction;
     bool lookRight;
 
     
     int ConditionId;
+    int group;
     yarp::os::Bottle num;
     //Variable initialization used later to insert each rwo condition string and isolate difefrent words (e. interact, left, right)
     std::string buf; // Have a buffer string
@@ -225,7 +226,7 @@ protected:
     std::ifstream ifile;
 
     //Variable initialization used later to detect mouse events
-    int bLeft, middle, bRight;
+    int bLeft, middle, bRight, bMiddle;
     signed char x, y;
     int fd;
     unsigned char button[3];
@@ -268,8 +269,8 @@ public:
         robotName = rf.check("robot", yarp::os::Value("icubSim"), "robot name (string)").asString();
         participantNumber = rf.check("participant", yarp::os::Value("p0"), "participant num").asString();
         ConditionId = rf.check("condition", yarp::os::Value(0), "condition id").asInt();
-        
-        
+        group = rf.check("group", yarp::os::Value(1), "group").asInt();
+
         yarp::os::Bottle *restPos = rf.findGroup("head-positions").find("rest_position").asList();
         yarp::os::Bottle *downPos = rf.findGroup("head-positions").find("down_position").asList();
         yarp::os::Bottle *straightPos = rf.findGroup("head-positions").find("straight_position").asList();
@@ -315,7 +316,7 @@ public:
         {  
            ifile.close();
            results.open(Filename.c_str(), std::ofstream::app);
-           results << "Participant"<< ", "<< "ConditionNumber"<<" , "<<"InteractionMode" <<", "<< "RobotScreen" << ", " << "LetterScreen" << ", " <<"Letter"<< ", " <<"PressButton"<<", " <<"ReactionTime"<<std::endl;  
+           results << "Participant"<< ", "<< "TrialNumber"<<" , "<<"InteractionMode" <<", "<< "RobotGaze" << ", " << "LetterApperance" << ", " <<"LetterIdentity"<< ", " <<"CorrectResponse"<<", "<<"Group"<<", "<<"Response"<<", " <<"ReactionTime"<<std::endl;  
                
         }
         
@@ -371,7 +372,7 @@ public:
         yDebug("threadInit");
         t=t0=t1=t2=t3=t4=yarp::os::Time::now();
         actionDone = false;
-        lookLeft = false;
+        secAction = false;
         lookRight = false;
        
 
@@ -416,14 +417,20 @@ public:
     virtual void run()
     {
 
-        
-        if (ConditionId ==Conditions.size()+1)      
+       // yDebug("Conditions.size() %d", Conditions.size());
+        if (ConditionId ==Conditions.size())      
             threadRelease();
+       
 
-        t=yarp::os::Time::now();
+              t=yarp::os::Time::now();
+
+               
       //  yDebug("Time is %lf", t-t2 );
         if (state == STATE_INITIAL)
-        {
+       {                
+
+
+               yDebug("Time is %lf", t-t2 );
    //         yDebug("IN STATE INITIAL");
            
             if (!actionDone)
@@ -502,7 +509,7 @@ public:
 
                 {   
                     yDebug("Robot is interacting with human");
-                    if (!lookLeft)
+                    if (!secAction)
                     {    
                         yDebug("Going to pose %s", straightP.toString().c_str());
                         igaze->lookAtFixationPoint(straightP);
@@ -517,17 +524,17 @@ public:
 
                         //yDebug("LOOKING AT: %s", vecLeft.toString(2,2).c_str());
                         igaze->lookAtMonoPixelWithVergence(0, vecLeft, 10.0);
-                        lookLeft=true;
+                        secAction=true;
                     }
                 }
                 else
                 {
                     yDebug("Robot is not interacting with human");
-                    if (!lookLeft)
+                    if (!secAction)
                     {
                         yDebug("Going to pose %s", downP.toString().c_str());
                         igaze->lookAtFixationPoint(downP);
-                        lookLeft=true;
+                        secAction=true;
                     }                    
                 }
                 
@@ -540,7 +547,7 @@ public:
           //      yDebug("Time is %lf - switching state", t-t2 );
                 state = STATE_SCREEN;
                 actionDone = false;
-                lookLeft = false;
+                secAction = false;
             }
         }
         
@@ -568,25 +575,29 @@ public:
             
             if (t-t2> 6.0)
             {
-                //yDebug("Time is %lf - switching state", t-t2 );
-                yarp::os::Bottle rpcCmd;
-                std::locale loc;
-                
-                tokens[2][0] = std::tolower(tokens[2][0],loc);
-                std::string stringImage = tokens[2];
 
-                rpcCmd.addString("display");
-                rpcCmd.addString(stringImage);
+                if (!secAction)
+                { 
+                    //yDebug("Time is %lf - switching state", t-t2 );
+                    yarp::os::Bottle rpcCmd;
+                    std::locale loc;
+                    
+                    tokens[2][0] = std::tolower(tokens[2][0],loc);
+                    std::string stringImage = tokens[2];
 
-                std::string letterImage = "letter" + tokens[3] + ".jpg";
-                rpcCmd.addString(letterImage);
-                //yDebug("Sending message... %s\n", rpcCmd.toString().c_str());
-                yarp::os::Bottle response;
-                rpcPort.write(rpcCmd,response);
-                //yDebug("Got response: %s\n", response.toString().c_str());   
-                
-                actionDone = false;   
-                          
+                    rpcCmd.addString("display");
+                    rpcCmd.addString(stringImage);
+
+                    std::string letterImage = "letter" + tokens[3] + ".jpg";
+                    rpcCmd.addString(letterImage);
+                    yDebug("Sending message... %s\n", rpcCmd.toString().c_str());
+                    yarp::os::Bottle response;
+                    rpcPort.write(rpcCmd,response);
+                    yDebug("Got response: %s\n", response.toString().c_str());   
+                    
+                    //actionDone = false;   
+                    secAction =true;
+                }
                 
             }  
             
@@ -650,8 +661,19 @@ public:
                             
                             t=yarp::os::Time::now();                     
                             t1=t2=t3=t;  
-                            bRight=0;                          
-                            results << participantNumber.c_str() << ", "<< ConditionId<<","<<tokens[0] << ", " << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"right"<<","<<reactionTime.toString().c_str()<<std::endl;                  
+                            bRight=0;    
+
+                            if (tokens[3].compare("T")==0 &&  group==1)                     
+                            results << participantNumber.c_str() << ", "<< ConditionId<<","<<tokens[0] << ", " << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"right"<<","<<group<<","<<"right"<<","<<reactionTime.toString().c_str()<<std::endl;                  
+                            
+                            else if (tokens[3].compare("T")==0 &&  group==2)  
+                            results << participantNumber.c_str() << ", "<< ConditionId<<","<<tokens[0] << ", " << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"left"<<","<<group<<","<<"right"<<","<<reactionTime.toString().c_str()<<std::endl;                  
+                           
+                            else if (tokens[3].compare("F")==0 &&  group==1)  
+                            results << participantNumber.c_str() << ", "<< ConditionId<<","<<tokens[0] << ", " << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"left"<<","<<group<<","<<"right"<<","<<reactionTime.toString().c_str()<<std::endl;                  
+                         
+                            else if (tokens[3].compare("F")==0 &&  group==2)
+                            results << participantNumber.c_str() << ", "<< ConditionId<<","<<tokens[0] << ", " << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"right"<<","<<group<<","<<"right"<<","<<reactionTime.toString().c_str()<<std::endl;                  
                             
                             close(fd); 
                             reactionTime.clear();
@@ -672,11 +694,23 @@ public:
                             
                             t=yarp::os::Time::now();   
                             t1=t2=t3=t;                            
-                            bLeft=0;                
-                            results << participantNumber.c_str() << ", "<<ConditionId<<","<< tokens[0] << ", "  << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"left"<<","<<reactionTime.toString().c_str()<<std::endl;                                            
+                            bLeft=0;  
+                            if (tokens[3].compare("T")==0 &&  group==1)                     
+                            results << participantNumber.c_str() << ", "<< ConditionId<<","<<tokens[0] << ", " << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"right"<<","<<group<<","<<"left"<<","<<reactionTime.toString().c_str()<<std::endl;                  
+                            
+                            else if (tokens[3].compare("T")==0 &&  group==2)  
+                            results << participantNumber.c_str() << ", "<< ConditionId<<","<<tokens[0] << ", " << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"left"<<","<<group<<","<<"left"<<","<<reactionTime.toString().c_str()<<std::endl;                  
+                           
+                            else if (tokens[3].compare("F")==0 &&  group==1)  
+                            results << participantNumber.c_str() << ", "<< ConditionId<<","<<tokens[0] << ", " << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"left"<<","<<group<<","<<"left"<<","<<reactionTime.toString().c_str()<<std::endl;                  
+                         
+                            else if (tokens[3].compare("F")==0 &&  group==2)
+                            results << participantNumber.c_str() << ", "<< ConditionId<<","<<tokens[0] << ", " << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"right"<<","<<group<<","<<"left"<<","<<reactionTime.toString().c_str()<<std::endl;                  
+                                  
+
                             close(fd);
                             reactionTime.clear();
-                            state = STATE_INITIAL;                   
+                            state = STATE_WAIT;                   
 
 
                             break;
@@ -694,9 +728,56 @@ public:
             //}
         }
         
-       // if ( state == STATE_WAIT)
-       // {
-          //  yDebug("IN STATE WAIT");
+        if ( state == STATE_WAIT)
+        {
+            yDebug("IN STATE WAIT");
+            // every forty trials break until the particpant presses the middle mouse button
+            if (ConditionId % 40 == 0) 
+            {
+                //mouse event         
+                if ((fd = open(MOUSEFILE, O_RDONLY)) == -1) 
+                {
+                yDebug("Cannot access mouse device");
+                exit(EXIT_FAILURE);
+                }  
+
+                while(read(fd, button, sizeof(button))!=-1)
+                {  
+                    
+                    yDebug("Pressed %d", button[0]);                
+                    bMiddle = button[0] & 0x4;     
+                   
+                     x = button[1];
+                     y = button[2];
+                     yDebug("x=%d, y=%d, left=%d, middle=%d, right=%d\n", x, y, bLeft, bMiddle, bRight);
+
+                    if (bMiddle==4)
+                    {   
+                        
+                        int i=read(fd, button, sizeof(button));
+                        //double diff = (yarp::os::Time::now()-t5);
+                        //yDebug("x=%d, y=%d, left=%d, middle=%d, right=%d\n", x, y, bLeft, middle, bRight);
+                        
+                        t=yarp::os::Time::now();                     
+                        t1=t2=t3=t;  
+                        bMiddle=0;   
+                        close(fd);
+                        state =STATE_INITIAL;
+                        break;
+                    }
+                }
+
+            
+           }
+           else
+           {
+                t=yarp::os::Time::now();                     
+                t1=t2=t3=t;  
+                state =STATE_INITIAL;
+
+           }
+
+            
             
            // if (t-t2> STILL_STATE_TIME)
            // {
@@ -704,7 +785,7 @@ public:
              //   t1=t2=t3=t;
                 //state = STATE_INITIAL;
             //}
-       // }
+        }   
 
     }
 
