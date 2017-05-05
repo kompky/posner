@@ -732,7 +732,7 @@ public:
         {
             yDebug("IN STATE WAIT");
             // every forty trials break until the particpant presses the middle mouse button
-            if (ConditionId % 40 == 0) 
+            if (ConditionId % 5 == 0) 
             {
                 //mouse event         
                 if ((fd = open(MOUSEFILE, O_RDONLY)) == -1) 
