@@ -343,8 +343,8 @@ public:
         igaze->storeContext(&startup_context_id);
         
         // set trajectory time:
-        igaze->setNeckTrajTime(0.6);
-        igaze->setEyesTrajTime(0.3);
+        igaze->setNeckTrajTime(0.4);
+        igaze->setEyesTrajTime(0.2);
         
         igaze->setTrackingMode(true);
         
