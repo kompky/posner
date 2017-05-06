@@ -417,26 +417,18 @@ public:
     virtual void run()
     {
 
-       // yDebug("Conditions.size() %d", Conditions.size());
         if (ConditionId ==Conditions.size())      
             threadRelease();
        
-
-              t=yarp::os::Time::now();
-
+        t=yarp::os::Time::now();
+        igaze->blockEyes(2.0);
                
-      //  yDebug("Time is %lf", t-t2 );
         if (state == STATE_INITIAL)
-       {                
-
-
-               yDebug("Time is %lf", t-t2 );
-   //         yDebug("IN STATE INITIAL");
+        {                
+           yDebug("Time is %lf", t-t2 );
            
             if (!actionDone)
             {
-    //            yDebug("CLOSING EYES");
-                //close eyes
                 yarp::os::Bottle cmd;
                 cmd.clear();
                 cmd.addString("set");
@@ -444,7 +436,6 @@ public:
                 cmd.addString("sad");
                 faceEmotion.write(cmd);
                 
-      //          yDebug("Going to pose %s", restP.toString().c_str());
                 //go to rest position
                 igaze->lookAtFixationPoint(restP);
                 actionDone = true;
@@ -478,11 +469,9 @@ public:
         
         if ( state == STATE_INTERACT)
         {
-        //    yDebug("IN STATE INTERACTION MODE");
+            igaze->clearEyes();      
             if (!actionDone)
             {
-        //        yDebug("OPENING EYES");
-                //open eyes
                 yarp::os::Bottle cmd;
                 cmd.clear();
                 cmd.addString("set");
@@ -497,12 +486,7 @@ public:
             printStatus(straightP);
                 
             yarp::os::Bottle eyes = process.getEyes();
-            
-        //    yDebug("Time is %lf", t-t2 );
-            
-            //yDebug("EYES AT: %s", eyes.toString().c_str());            
-
-
+ 
             if (t-t2> 2.5)
             {   
                 if(tokens[0].compare("Interact")==0)
@@ -720,12 +704,6 @@ public:
                     
                     }     
             
-            
-           // if (t-t2> 1.0)
-           // {
-               // yDebug("Time is %lf - switching state", t-t2 );
-               // state = STATE_WAIT;
-            //}
         }
         
         if ( state == STATE_WAIT)
