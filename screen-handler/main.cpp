@@ -186,8 +186,8 @@ class Finder : public yarp::os::RFModule,
 
         if( firstImage.data && secondImage.data)
         {
-            cv::Mat leftImage( firstImage.size(), CV_8UC3, cv::Scalar(0,0,0));
-            cv::Mat rightImage(firstImage.size(), CV_8UC3, cv::Scalar(0,0,0));
+            cv::Mat leftImage( firstImage.size(), CV_8UC3, cv::Scalar(255,255,255));
+            cv::Mat rightImage(firstImage.size(), CV_8UC3, cv::Scalar(255,255,255));
 
             mutex.lock();
 

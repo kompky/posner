@@ -382,7 +382,7 @@ public:
         yarp::os::Bottle resImage;
         yarp::os::Bottle imagLoad;
         imagLoad.addString("load");
-        imagLoad.addString("letterF.jpg");
+        imagLoad.addString("letterV.jpg");
         imagLoad.addString("letterT.jpg");
         bool returnValue=true;
         rpcPort.write(imagLoad,resImage);
@@ -421,11 +421,11 @@ public:
             threadRelease();
        
         t=yarp::os::Time::now();
-        igaze->blockEyes(2.0);
+        //igaze->blockEyes(2.0);
                
         if (state == STATE_INITIAL)
         {                
-           yDebug("Time is %lf", t-t2 );
+           //yDebug("Time is %lf", t-t2 );
            
             if (!actionDone)
             {
@@ -469,7 +469,7 @@ public:
         
         if ( state == STATE_INTERACT)
         {
-            igaze->clearEyes();      
+           // igaze->clearEyes();      
             if (!actionDone)
             {
                 yarp::os::Bottle cmd;
@@ -492,7 +492,7 @@ public:
                 if(tokens[0].compare("Interact")==0)
 
                 {   
-                    yDebug("Robot is interacting with human");
+                    //yDebug("Robot is interacting with human");
                     if (!secAction)
                     {    
                         yDebug("Going to pose %s", straightP.toString().c_str());
@@ -523,12 +523,12 @@ public:
                 }
                 
 
-          }   
+            }   
 
            
             if (t-t2> 5.0)
             {
-          //      yDebug("Time is %lf - switching state", t-t2 );
+               // yDebug("Time is %lf - switching state", t-t2 );
                 state = STATE_SCREEN;
                 actionDone = false;
                 secAction = false;
@@ -593,6 +593,7 @@ public:
                 yarp::os::Bottle cmd, resp;
                 cmd.addString("resetImages");
                 rpcPort.write(cmd,resp);
+		secAction = false;
                
             }       
          
@@ -653,15 +654,15 @@ public:
                             else if (tokens[3].compare("T")==0 &&  group==2)  
                             results << participantNumber.c_str() << ", "<< ConditionId<<","<<tokens[0] << ", " << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"left"<<","<<group<<","<<"right"<<","<<reactionTime.toString().c_str()<<std::endl;                  
                            
-                            else if (tokens[3].compare("F")==0 &&  group==1)  
+                            else if (tokens[3].compare("V")==0 &&  group==1)  
                             results << participantNumber.c_str() << ", "<< ConditionId<<","<<tokens[0] << ", " << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"left"<<","<<group<<","<<"right"<<","<<reactionTime.toString().c_str()<<std::endl;                  
                          
-                            else if (tokens[3].compare("F")==0 &&  group==2)
+                            else if (tokens[3].compare("V")==0 &&  group==2)
                             results << participantNumber.c_str() << ", "<< ConditionId<<","<<tokens[0] << ", " << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"right"<<","<<group<<","<<"right"<<","<<reactionTime.toString().c_str()<<std::endl;                  
                             
                             close(fd); 
                             reactionTime.clear();
-                            state = STATE_INITIAL;
+                            state = STATE_WAIT;
                                                   
                             
                             break;
@@ -685,10 +686,10 @@ public:
                             else if (tokens[3].compare("T")==0 &&  group==2)  
                             results << participantNumber.c_str() << ", "<< ConditionId<<","<<tokens[0] << ", " << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"left"<<","<<group<<","<<"left"<<","<<reactionTime.toString().c_str()<<std::endl;                  
                            
-                            else if (tokens[3].compare("F")==0 &&  group==1)  
+                            else if (tokens[3].compare("V")==0 &&  group==1)  
                             results << participantNumber.c_str() << ", "<< ConditionId<<","<<tokens[0] << ", " << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"left"<<","<<group<<","<<"left"<<","<<reactionTime.toString().c_str()<<std::endl;                  
                          
-                            else if (tokens[3].compare("F")==0 &&  group==2)
+                            else if (tokens[3].compare("V")==0 &&  group==2)
                             results << participantNumber.c_str() << ", "<< ConditionId<<","<<tokens[0] << ", " << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"right"<<","<<group<<","<<"left"<<","<<reactionTime.toString().c_str()<<std::endl;                  
                                   
 
@@ -708,65 +709,65 @@ public:
         
         if ( state == STATE_WAIT)
         {
+
+
             yDebug("IN STATE WAIT");
             // every forty trials break until the particpant presses the middle mouse button
-            if (ConditionId % 5 == 0) 
+            if ( ConditionId  % 10 == 0 ) 
+	    	
+		
             {
-                //mouse event         
-                if ((fd = open(MOUSEFILE, O_RDONLY)) == -1) 
-                {
-                yDebug("Cannot access mouse device");
-                exit(EXIT_FAILURE);
-                }  
+		yDebug("in user repsonse");
+	        //mouse event         
+	        if ((fd = open(MOUSEFILE, O_RDONLY)) == -1) 
+	        {
+	            yDebug("Cannot access mouse device");
+	            exit(EXIT_FAILURE);
+	        }  
 
-                while(read(fd, button, sizeof(button))!=-1)
+              	 while(read(fd, button, sizeof(button))!=-1)
                 {  
                     
-                    yDebug("Pressed %d", button[0]);                
-                    bMiddle = button[0] & 0x4;     
-                   
-                     x = button[1];
-                     y = button[2];
-                     yDebug("x=%d, y=%d, left=%d, middle=%d, right=%d\n", x, y, bLeft, bMiddle, bRight);
+                    	
+                        yDebug("Pressed %d", button[0]);                
+                        bLeft = button[0] & 0x1;     
+                        bRight = button[0] & 0x2;
+ 			bMiddle = button[0] & 0x4;
 
-                    if (bMiddle==4)
-                    {   
-                        
-                        int i=read(fd, button, sizeof(button));
-                        //double diff = (yarp::os::Time::now()-t5);
-                        //yDebug("x=%d, y=%d, left=%d, middle=%d, right=%d\n", x, y, bLeft, middle, bRight);
-                        
-                        t=yarp::os::Time::now();                     
-                        t1=t2=t3=t;  
-                        bMiddle=0;   
-                        close(fd);
-                        state =STATE_INITIAL;
-                        break;
-                    }
-                }
+                         x = button[1];
+                         y = button[2];
+                         yDebug("x=%d, y=%d, left=%d, middle=%d, right=%d\n", x, y, bLeft, middle, bRight);
 
-            
-           }
+                   	 if (bMiddle==4)
+                   	 {   
+                            int i=read(fd, button, sizeof(button));
+                            double diff = (yarp::os::Time::now()-t5);
+                            yDebug("x=%d, y=%d, left=%d, middle=%d, right=%d\n", x, y, bLeft, middle, bRight);
+                            
+                            yDebug("MOUSE right"); 
+
+                            
+                            
+                            t=yarp::os::Time::now();                     
+                            t1=t2=t3=t;  
+                            bMiddle=0; 
+		            close(fd);
+                            state =STATE_INITIAL;
+                            break;                     
+                          } 
+                  }
+	   }
            else
            {
-                t=yarp::os::Time::now();                     
+                t=yarp::os::Time::now(); 
                 t1=t2=t3=t;  
-                state =STATE_INITIAL;
+                state = STATE_INITIAL;
 
-           }
+            }
 
-            
-            
-           // if (t-t2> STILL_STATE_TIME)
-           // {
-              //  yDebug("In still state time");
-             //   t1=t2=t3=t;
-                //state = STATE_INITIAL;
-            //}
         }   
 
     }
-
     /********************************************************/
     virtual void threadRelease()
     {
