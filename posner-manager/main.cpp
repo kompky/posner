@@ -110,11 +110,11 @@ public:
         yarp::os::Bottle eyes;
        
         if (this->getInputCount()>0)
-        {
+        {        
             eyes.addDouble(leftEyeX);
             eyes.addDouble(leftEyeY);
             eyes.addDouble(rightEyeX);
-            eyes.addDouble(rightEyeY);
+            eyes.addDouble(rightEyeY);                          
             
         }
         else
@@ -150,12 +150,15 @@ public:
         
         if (landmarks.size() > 0)
         {
-            mutex.lock();
-            rightEyeX = landmarks.get(0).asList()->get(84).asInt() + ((landmarks.get(0).asList()->get(90).asInt()) - landmarks.get(0).asList()->get(84).asInt());
-            rightEyeY = landmarks.get(0).asList()->get(85).asInt() + ((landmarks.get(0).asList()->get(91).asInt()) - landmarks.get(0).asList()->get(85).asInt());
             
-            leftEyeX = landmarks.get(0).asList()->get(72).asInt() + ((landmarks.get(0).asList()->get(78).asInt()) - landmarks.get(0).asList()->get(72).asInt());
-            leftEyeY = landmarks.get(0).asList()->get(75).asInt() + ((landmarks.get(0).asList()->get(81).asInt()) - landmarks.get(0).asList()->get(75).asInt());
+            mutex.lock();
+            rightEyeX = landmarks.get(0).asList()->get(84).asInt() + (landmarks.get(0).asList()->get(90).asInt() - landmarks.get(0).asList()->get(84).asInt())/2;
+            rightEyeY = landmarks.get(0).asList()->get(85).asInt() + (landmarks.get(0).asList()->get(91).asInt() - landmarks.get(0).asList()->get(85).asInt())/2;
+            
+            leftEyeX = landmarks.get(0).asList()->get(72).asInt() + (landmarks.get(0).asList()->get(78).asInt() - landmarks.get(0).asList()->get(72).asInt())/2;
+            leftEyeY = landmarks.get(0).asList()->get(75).asInt() + (landmarks.get(0).asList()->get(81).asInt() - landmarks.get(0).asList()->get(75).asInt())/2;
+            
+            
             mutex.unlock();
         }
     }
@@ -343,6 +346,8 @@ public:
         igaze->storeContext(&startup_context_id);
         
         // set trajectory time:
+        //igaze->setNeckTrajTime(1.2);
+        //igaze->setEyesTrajTime(0.4);
         igaze->setNeckTrajTime(0.4);
         igaze->setEyesTrajTime(0.2);
         
@@ -446,7 +451,7 @@ public:
             {
                 
                 ConditionId=ConditionId+1;
-                yDebug("Condition at: %d", ConditionId);
+                //yDebug("Condition at: %d", ConditionId);
 
 
 
@@ -497,27 +502,33 @@ public:
                     {    
                         yDebug("Going to pose %s", straightP.toString().c_str());
                         igaze->lookAtFixationPoint(straightP);
-                
+                        printStatus(straightP);
+                         
                         yarp::sig::Vector vecLeft;
                         yDebug("WILL LOOK AT EYES AT: %s", eyes.toString().c_str());
                         
                         for (int i=0; i< eyes.size()/2; i++)
                             vecLeft.push_back(eyes.get(i).asDouble());
 
-                        vecLeft[1] = vecLeft[1] + 15;
+
+                        vecLeft[0] = vecLeft[0] + 10;vecLeft[1] = vecLeft[1] + 30;
+                       
 
                         //yDebug("LOOKING AT: %s", vecLeft.toString(2,2).c_str());
-                        igaze->lookAtMonoPixelWithVergence(0, vecLeft, 10.0);
+                        //igaze->lookAtMonoPixelWithVergence(0, vecLeft, 10.0);
+                        //igaze->lookAtMonoPixel(0, vecLeft, 1.0);
                         secAction=true;
                     }
                 }
                 else
                 {
-                    yDebug("Robot is not interacting with human");
+                   // yDebug("Robot is not interacting with human");
                     if (!secAction)
                     {
                         yDebug("Going to pose %s", downP.toString().c_str());
+                        
                         igaze->lookAtFixationPoint(downP);
+                        printStatus(downP);
                         secAction=true;
                     }                    
                 }
@@ -538,13 +549,17 @@ public:
         if ( state == STATE_SCREEN)
         {
             if (!actionDone)
-            {   
+            
+            {                    
+                
                 if (tokens[1].compare("Left")==0)
                 {
                     //yDebug("Time is %lf - switching state", t-t2 );
                     //yDebug("lookAtFixationPoint SCREEN");
                     //yDebug("Going to pose %s", leftP.toString().c_str());
+                   
                     igaze->lookAtFixationPoint(leftP);
+                    printStatus(leftP);
                     actionDone = true;
                 }
                 else
@@ -552,7 +567,9 @@ public:
                     //yDebug("Time is %lf - switching state", t-t2 );
                     //yDebug("lookAtFixationPoint SCREEN");
                     //yDebug("Going to pose %s", rightP.toString().c_str());
+             
                     igaze->lookAtFixationPoint(rightP);
+                    printStatus(rightP);
                     actionDone = true;
                 }
             }
@@ -593,7 +610,7 @@ public:
                 yarp::os::Bottle cmd, resp;
                 cmd.addString("resetImages");
                 rpcPort.write(cmd,resp);
-		secAction = false;
+		        secAction = false;
                
             }       
          
@@ -649,7 +666,7 @@ public:
                             bRight=0;    
 
                             if (tokens[3].compare("T")==0 &&  group==1)                     
-                            results << participantNumber.c_str() << ", "<< ConditionId<<","<<tokens[0] << ", " << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"right"<<","<<group<<","<<"right"<<","<<reactionTime.toString().c_str()<<std::endl;                  
+                            results << participantNumber.c_str() << ", "<< ConditionId<<","<<tokens[0] << ", " << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", "                     <<"right"<<","<<group<<","<<"right"<<","<<reactionTime.toString().c_str()<<std::endl;                  
                             
                             else if (tokens[3].compare("T")==0 &&  group==2)  
                             results << participantNumber.c_str() << ", "<< ConditionId<<","<<tokens[0] << ", " << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"left"<<","<<group<<","<<"right"<<","<<reactionTime.toString().c_str()<<std::endl;                  
