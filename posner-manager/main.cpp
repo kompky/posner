@@ -75,9 +75,9 @@ class ProcessLandmarks : public yarp::os::BufferedPort<yarp::os::Bottle>
     std::string moduleName;
     int rightEyeX, rightEyeY;
     int leftEyeX, leftEyeY;
-    
+
     yarp::os::Mutex mutex;
-    
+
 
 public:
     /********************************************************/
@@ -85,22 +85,22 @@ public:
     {
         this->moduleName = moduleName;
     }
-    
+
     /********************************************************/
     ~ProcessLandmarks()
     {
-        
+
     };
-    
+
     /********************************************************/
     bool open()
     {
         this->useCallback();
-        
+
         BufferedPort<yarp::os::Bottle>::open( "/" + moduleName + "/landmarks:i" );
-        
+
         rightEyeX = rightEyeY = leftEyeX = leftEyeY = 0;
-        
+
         return true;
     }
     /********************************************************/
@@ -108,14 +108,14 @@ public:
     {
         mutex.lock();
         yarp::os::Bottle eyes;
-       
+
         if (this->getInputCount()>0)
-        {        
+        {
             eyes.addDouble(leftEyeX);
             eyes.addDouble(leftEyeY);
             eyes.addDouble(rightEyeX);
-            eyes.addDouble(rightEyeY);                          
-            
+            eyes.addDouble(rightEyeY);
+
         }
         else
         {
@@ -127,11 +127,11 @@ public:
 
         //yDebug("EYES %s", eyes.toString().c_str());
         mutex.unlock();
-        
+
         return eyes;
     }
-    
-    
+
+
     /********************************************************/
     void close()
     {
@@ -143,22 +143,30 @@ public:
     {
         BufferedPort<yarp::os::Bottle>::interrupt();
     }
-    
+
     /********************************************************/
     void onRead( yarp::os::Bottle &landmarks )
     {
-        
+
         if (landmarks.size() > 0)
         {
-            
+
             mutex.lock();
-            rightEyeX = landmarks.get(0).asList()->get(84).asInt() + (landmarks.get(0).asList()->get(90).asInt() - landmarks.get(0).asList()->get(84).asInt())/2;
-            rightEyeY = landmarks.get(0).asList()->get(85).asInt() + (landmarks.get(0).asList()->get(91).asInt() - landmarks.get(0).asList()->get(85).asInt())/2;
-            
-            leftEyeX = landmarks.get(0).asList()->get(72).asInt() + (landmarks.get(0).asList()->get(78).asInt() - landmarks.get(0).asList()->get(72).asInt())/2;
-            leftEyeY = landmarks.get(0).asList()->get(75).asInt() + (landmarks.get(0).asList()->get(81).asInt() - landmarks.get(0).asList()->get(75).asInt())/2;
-            
-            
+            /*
+            rightEyeX = landmarks.get(0).asList()->get(84).asInt()/2 + (landmarks.get(0).asList()->get(90).asInt()/2 - landmarks.get(0).asList()->get(84).asInt()/2)/2;
+            rightEyeY = landmarks.get(0).asList()->get(85).asInt()/2 + (landmarks.get(0).asList()->get(91).asInt()/2 - landmarks.get(0).asList()->get(85).asInt()/2)/2;
+
+            leftEyeX = landmarks.get(0).asList()->get(72).asInt()/2 + (landmarks.get(0).asList()->get(78).asInt()/2 - landmarks.get(0).asList()->get(72).asInt()/2)/2;
+            leftEyeY = landmarks.get(0).asList()->get(75).asInt()/2 + (landmarks.get(0).asList()->get(81).asInt()/2 - landmarks.get(0).asList()->get(75).asInt()/2)/2;
+*/
+
+            rightEyeX = landmarks.get(0).asList()->get(0).asInt();
+            rightEyeY = landmarks.get(0).asList()->get(1).asInt();
+
+            leftEyeX = landmarks.get(0).asList()->get(2).asInt();
+            leftEyeY = landmarks.get(0).asList()->get(3).asInt();
+
+
             mutex.unlock();
         }
     }
@@ -174,32 +182,32 @@ protected:
     yarp::dev::IGazeControl      *igaze;
     yarp::dev::IEncoders         *ienc;
     yarp::dev::IPositionControl  *ipos;
-    
+
     yarp::os::Port faceEmotion;
     yarp::os::RpcClient rpcPort;
-    
+
 
     int state;
     int startup_context_id;
 
     yarp::sig::Vector fp;
-    
+
     yarp::sig::Vector restP;
     yarp::sig::Vector downP;
     yarp::sig::Vector straightP;
     yarp::sig::Vector leftP;
     yarp::sig::Vector rightP;
-   
+
 
     std::deque<yarp::sig::Vector> poiList;
-    
+
     ProcessLandmarks &process;
-    
+
     std::string robotName;
     //yarp::sig::Matrix ConditionMatrix;
     yarp::os::Bottle Conditions;
 
-   
+
     //yarp::sig::Vector <string> ConditionVector;
     //std::vector<std::vector<cv::Point> > contours;
     //std::vector<std::string> ConditionVector;
@@ -212,18 +220,18 @@ protected:
     double t4;
     double t5;
     double t6;
-    
+
     bool actionDone;
     bool secAction;
     bool lookRight;
 
-    
+
     int ConditionId;
     int group;
     yarp::os::Bottle num;
     //Variable initialization used later to insert each rwo condition string and isolate difefrent words (e. interact, left, right)
     std::string buf; // Have a buffer string
-    
+
     std::vector<std::string> tokens; // Create vector to hold our words
     std::ofstream results;
     std::ifstream ifile;
@@ -266,7 +274,7 @@ public:
     {
         // here we specify that the event we are interested in is of type "motion-done"
         gazeEventParameters.type="motion-done";
-        
+
         //get info from config file
         std::string moduleName = rf.check("name", yarp::os::Value("posner-manager"), "module name (string)").asString();
         robotName = rf.check("robot", yarp::os::Value("icubSim"), "robot name (string)").asString();
@@ -279,7 +287,7 @@ public:
         yarp::os::Bottle *straightPos = rf.findGroup("head-positions").find("straight_position").asList();
         yarp::os::Bottle *leftScreenPos = rf.findGroup("head-positions").find("left_screen").asList();
         yarp::os::Bottle *rightScreenPos = rf.findGroup("head-positions").find("right_screen").asList();
-    
+
         for (int i =0; i<restPos->size(); i++)
         {
             yInfo("restPos = %f ", restPos->get(i).asDouble());
@@ -289,50 +297,50 @@ public:
             leftP.push_back(leftScreenPos->get(i).asDouble());
             rightP.push_back(rightScreenPos->get(i).asDouble());
         }
-      
-                
-       
-        Conditions = rf.findGroup("combinations");   
-        
 
-        faceEmotion.open("/" + moduleName + "/faceEmotion:o");  
-        rpcPort.open("/" + moduleName + "/rpc");     
-     
+
+
+        Conditions = rf.findGroup("combinations");
+
+
+        faceEmotion.open("/" + moduleName + "/faceEmotion:o");
+        rpcPort.open("/" + moduleName + "/rpc");
+
 
         yarp::os::Network::connect("/faceLandmarks/landmarks:o", "/posner-manager/landmarks:i");
         yarp::os::Network::connect("/posner-manager/faceEmotion:o", "/icub/face/emotions/in");
 
         yarp::os::Network::connect("/posner-manager/rpc", "/screen-handler/rpc");
-        
-      
-        
+
+
+
         yInfo("Particpantid %s", participantNumber.c_str());
         std::string Filename="PartcipantsResults" + participantNumber + ".csv";
         ifile.open(Filename.c_str());
-        if (ifile) 
-        {  
+        if (ifile)
+        {
            ifile.close();
            results.open(Filename.c_str(), std::ofstream::app);
-            
+
         }
         else
-        {  
+        {
            ifile.close();
            results.open(Filename.c_str(), std::ofstream::app);
-           results << "Participant"<< ", "<< "TrialNumber"<<" , "<<"InteractionMode" <<", "<< "RobotGaze" << ", " << "LetterApperance" << ", " <<"LetterIdentity"<< ", " <<"CorrectResponse"<<", "<<"Group"<<", "<<"Response"<<", " <<"ReactionTime"<<std::endl;  
-               
+           results << "Participant"<< ", "<< "TrialNumber"<<" , "<<"InteractionMode" <<", "<< "RobotGaze" << ", " << "LetterApperance" << ", " <<"LetterIdentity"<< ", " <<"CorrectResponse"<<", "<<"Group"<<", "<<"Response"<<", " <<"ReactionTime"<<std::endl;
+
         }
-        
-      
+
+
         yDebug("public");
 
     }
 
     /********************************************************/
     virtual bool threadInit()
-    {   
-        
-    
+    {
+
+
         yarp::os::Property optGaze("(device gazecontrollerclient)");
         optGaze.put("remote","/iKinGazeCtrl");
         optGaze.put("local","/gaze_client");
@@ -342,35 +350,35 @@ public:
 
         // open the view
         clientGaze.view(igaze);
-        
+
         igaze->storeContext(&startup_context_id);
-        
+
         // set trajectory time:
         //igaze->setNeckTrajTime(1.2);
         //igaze->setEyesTrajTime(0.4);
         igaze->setNeckTrajTime(0.4);
         igaze->setEyesTrajTime(0.2);
-        
+
         igaze->setTrackingMode(true);
-        
+
         // print out some info about the controller
         yarp::os::Bottle info;
         igaze->getInfo(info);
         yInfo("info = %s\n",info.toString().c_str());
-        
+
         std::string portTorso = "/" + robotName + "/torso";
         yarp::os::Property optTorso("(device remote_controlboard)");
         optTorso.put("remote", portTorso);
         optTorso.put("local","/torso_client");
-        
+
         if (!clientTorso.open(optTorso))
             return false;
-        
+
         // open the view
         clientTorso.view(ienc);
         clientTorso.view(ipos);
         ipos->setRefSpeed(0,10.0);
-        
+
         fp.resize(3);
 
         state=STATE_INITIAL;
@@ -379,11 +387,11 @@ public:
         actionDone = false;
         secAction = false;
         lookRight = false;
-       
 
-       
+
+
         yDebug("Condition id %d", ConditionId);
-        
+
         yarp::os::Bottle resImage;
         yarp::os::Bottle imagLoad;
         imagLoad.addString("load");
@@ -399,13 +407,13 @@ public:
         yInfo("CheckResImage is %s ",CheckResImage.c_str());
         if (CheckResImage.compare("[ok]")==0)
             yInfo("Images loaded ok");
-          
+
         else
         {
             yInfo("Problem loading images");
             returnValue=false;
         }
-           
+
         return returnValue;
     }
 
@@ -422,16 +430,16 @@ public:
     virtual void run()
     {
 
-        if (ConditionId ==Conditions.size())      
+        if (ConditionId ==Conditions.size())
             threadRelease();
-       
+
         t=yarp::os::Time::now();
         //igaze->blockEyes(2.0);
-               
+
         if (state == STATE_INITIAL)
-        {                
+        {
            //yDebug("Time is %lf", t-t2 );
-           
+
             if (!actionDone)
             {
                 yarp::os::Bottle cmd;
@@ -440,41 +448,41 @@ public:
                 cmd.addString("eli");
                 cmd.addString("sad");
                 faceEmotion.write(cmd);
-                
+
                 //go to rest position
                 igaze->lookAtFixationPoint(restP);
                 actionDone = true;
             }
-                printStatus(restP);
-            
+
+
             if (t-t2> 2.0)
             {
-                
+                printStatus(restP);
                 ConditionId=ConditionId+1;
                 //yDebug("Condition at: %d", ConditionId);
 
 
 
                 std::stringstream ss(Conditions.get(ConditionId).toString().c_str()); // Insert the string into a stream
-               
+
                 while (ss >> buf)
 
                 tokens.push_back(buf);
                 std::cout<<tokens[0]<<std::endl;
                 std::cout<<tokens[1]<<std::endl;
                 std::cout<<tokens[2]<<std::endl;
-                std::cout<<tokens[3]<<std::endl; 
+                std::cout<<tokens[3]<<std::endl;
         //        yDebug("Time is %lf - switching state", t-t2 );
                 state = STATE_INTERACT;
-                actionDone = false;  
+                actionDone = false;
             }
         }
 
-        
-        
+
+
         if ( state == STATE_INTERACT)
         {
-           // igaze->clearEyes();      
+           // igaze->clearEyes();
             if (!actionDone)
             {
                 yarp::os::Bottle cmd;
@@ -483,40 +491,40 @@ public:
                 cmd.addString("eli");
                 cmd.addString("hap");
                 faceEmotion.write(cmd);
-                
-               
+
+
                 actionDone = true;
                 //t2 = t;
             }
-            printStatus(straightP);
-                
+
+
             yarp::os::Bottle eyes = process.getEyes();
- 
+
             if (t-t2> 2.5)
-            {   
+            {
                 if(tokens[0].compare("Interact")==0)
 
-                {   
+                {
                     //yDebug("Robot is interacting with human");
                     if (!secAction)
-                    {    
+                    {
                         yDebug("Going to pose %s", straightP.toString().c_str());
                         igaze->lookAtFixationPoint(straightP);
-                        printStatus(straightP);
-                         
+
                         yarp::sig::Vector vecLeft;
                         yDebug("WILL LOOK AT EYES AT: %s", eyes.toString().c_str());
-                        
+
                         for (int i=0; i< eyes.size()/2; i++)
                             vecLeft.push_back(eyes.get(i).asDouble());
 
 
-                        vecLeft[0] = vecLeft[0] + 10;vecLeft[1] = vecLeft[1] + 30;
-                       
+                        vecLeft[0] = vecLeft[0] + 20;
+                        vecLeft[1] = vecLeft[1] + 15;
+
 
                         //yDebug("LOOKING AT: %s", vecLeft.toString(2,2).c_str());
                         //igaze->lookAtMonoPixelWithVergence(0, vecLeft, 10.0);
-                        //igaze->lookAtMonoPixel(0, vecLeft, 1.0);
+                        igaze->lookAtMonoPixel(0, vecLeft, 1.0);
                         secAction=true;
                     }
                 }
@@ -526,40 +534,42 @@ public:
                     if (!secAction)
                     {
                         yDebug("Going to pose %s", downP.toString().c_str());
-                        
+
                         igaze->lookAtFixationPoint(downP);
-                        printStatus(downP);
                         secAction=true;
-                    }                    
+                    }
                 }
-                
 
-            }   
 
-           
+            }
+
+
             if (t-t2> 5.0)
             {
+              if(tokens[0].compare("Interact")!=0)
+                printStatus(downP);
+
+
                // yDebug("Time is %lf - switching state", t-t2 );
                 state = STATE_SCREEN;
                 actionDone = false;
                 secAction = false;
             }
         }
-        
+
         if ( state == STATE_SCREEN)
         {
             if (!actionDone)
-            
-            {                    
-                
+            {
+
                 if (tokens[1].compare("Left")==0)
                 {
                     //yDebug("Time is %lf - switching state", t-t2 );
                     //yDebug("lookAtFixationPoint SCREEN");
                     //yDebug("Going to pose %s", leftP.toString().c_str());
-                   
+
                     igaze->lookAtFixationPoint(leftP);
-                    printStatus(leftP);
+
                     actionDone = true;
                 }
                 else
@@ -567,22 +577,28 @@ public:
                     //yDebug("Time is %lf - switching state", t-t2 );
                     //yDebug("lookAtFixationPoint SCREEN");
                     //yDebug("Going to pose %s", rightP.toString().c_str());
-             
+
                     igaze->lookAtFixationPoint(rightP);
-                    printStatus(rightP);
+
                     actionDone = true;
                 }
             }
-            
+
             if (t-t2> 6.0)
             {
+                if (tokens[1].compare("Left")==0)
+                  printStatus(leftP);
+                else
+                  printStatus(rightP);
+
+
 
                 if (!secAction)
-                { 
+                {
                     //yDebug("Time is %lf - switching state", t-t2 );
                     yarp::os::Bottle rpcCmd;
                     std::locale loc;
-                    
+
                     tokens[2][0] = std::tolower(tokens[2][0],loc);
                     std::string stringImage = tokens[2];
 
@@ -594,160 +610,160 @@ public:
                     yDebug("Sending message... %s\n", rpcCmd.toString().c_str());
                     yarp::os::Bottle response;
                     rpcPort.write(rpcCmd,response);
-                    yDebug("Got response: %s\n", response.toString().c_str());   
-                    
-                    //actionDone = false;   
+                    yDebug("Got response: %s\n", response.toString().c_str());
+
+                    //actionDone = false;
                     secAction =true;
                 }
-                
-            }  
-            
-            
+
+            }
+
+
             if (t-t2> 6.2)
-            {   
+            {
                 t6 = yarp::os::Time::now();
                 state = STATE_RESPONSE;
                 yarp::os::Bottle cmd, resp;
                 cmd.addString("resetImages");
                 rpcPort.write(cmd,resp);
 		        secAction = false;
-               
-            }       
-         
+
+            }
+
       }
       if ( state == STATE_RESPONSE)
-      {         
+      {
 
                // struct input_event ie;
                 //unsigned char *ptr = (unsigned char*)&ie;
                 //unsigned char button,bLeft,bRight;
                 //int button;
-                
-                //mouse event         
-                if ((fd = open(MOUSEFILE, O_RDONLY)) == -1) 
+
+                //mouse event
+                if ((fd = open(MOUSEFILE, O_RDONLY)) == -1)
                 {
                 yDebug("Cannot access mouse device");
                 exit(EXIT_FAILURE);
-                }  
-                     
+                }
+
                //  yDebug("Time is %lf before reading the mouse", t-t2 );
                //  int x = read(fd, &ie, sizeof(struct input_event));
                //  yDebug("Time is %d mouse response", fd );
                //  yDebug("Time is %lf after reading the mouse", t-t2 );
-               t5 = yarp::os::Time::now();             
+               t5 = yarp::os::Time::now();
               // yDebug("Time between letter appearance and response %lf ", yarp::os::Time::now()-t6);
                 //yDebug("RESPONSE");
 
                     while(read(fd, button, sizeof(button))!=-1)
-                    {  
+                    {
                         double rt= yarp::os::Time::now()-t5;
-                        yDebug("Pressed %d", button[0]);                
-                        bLeft = button[0] & 0x1;     
+                        yDebug("Pressed %d", button[0]);
+                        bLeft = button[0] & 0x1;
                         bRight = button[0] & 0x2;
                          x = button[1];
                          y = button[2];
                          yDebug("x=%d, y=%d, left=%d, middle=%d, right=%d\n", x, y, bLeft, middle, bRight);
-                        
+
                         if (bRight==2)
-                        {   
-                            
+                        {
+
                             int i=read(fd, button, sizeof(button));
                             //double diff = (yarp::os::Time::now()-t5);
                             //yDebug("x=%d, y=%d, left=%d, middle=%d, right=%d\n", x, y, bLeft, middle, bRight);
                             reactionTime.addDouble(rt);
                             yDebug("Reaction Time is %lf ", rt);
                             yDebug("reaction time Bottle: %s",reactionTime.toString().c_str() );
-                            yDebug("MOUSE right"); 
+                            yDebug("MOUSE right");
                             actionDone=false;
                             tokens.clear();
-                            
-                            t=yarp::os::Time::now();                     
-                            t1=t2=t3=t;  
-                            bRight=0;    
 
-                            if (tokens[3].compare("T")==0 &&  group==1)                     
-                            results << participantNumber.c_str() << ", "<< ConditionId<<","<<tokens[0] << ", " << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", "                     <<"right"<<","<<group<<","<<"right"<<","<<reactionTime.toString().c_str()<<std::endl;                  
-                            
-                            else if (tokens[3].compare("T")==0 &&  group==2)  
-                            results << participantNumber.c_str() << ", "<< ConditionId<<","<<tokens[0] << ", " << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"left"<<","<<group<<","<<"right"<<","<<reactionTime.toString().c_str()<<std::endl;                  
-                           
-                            else if (tokens[3].compare("V")==0 &&  group==1)  
-                            results << participantNumber.c_str() << ", "<< ConditionId<<","<<tokens[0] << ", " << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"left"<<","<<group<<","<<"right"<<","<<reactionTime.toString().c_str()<<std::endl;                  
-                         
+                            t=yarp::os::Time::now();
+                            t1=t2=t3=t;
+                            bRight=0;
+
+                            if (tokens[3].compare("T")==0 &&  group==1)
+                            results << participantNumber.c_str() << ", "<< ConditionId<<","<<tokens[0] << ", " << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", "                     <<"right"<<","<<group<<","<<"right"<<","<<reactionTime.toString().c_str()<<std::endl;
+
+                            else if (tokens[3].compare("T")==0 &&  group==2)
+                            results << participantNumber.c_str() << ", "<< ConditionId<<","<<tokens[0] << ", " << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"left"<<","<<group<<","<<"right"<<","<<reactionTime.toString().c_str()<<std::endl;
+
+                            else if (tokens[3].compare("V")==0 &&  group==1)
+                            results << participantNumber.c_str() << ", "<< ConditionId<<","<<tokens[0] << ", " << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"left"<<","<<group<<","<<"right"<<","<<reactionTime.toString().c_str()<<std::endl;
+
                             else if (tokens[3].compare("V")==0 &&  group==2)
-                            results << participantNumber.c_str() << ", "<< ConditionId<<","<<tokens[0] << ", " << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"right"<<","<<group<<","<<"right"<<","<<reactionTime.toString().c_str()<<std::endl;                  
-                            
-                            close(fd); 
+                            results << participantNumber.c_str() << ", "<< ConditionId<<","<<tokens[0] << ", " << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"right"<<","<<group<<","<<"right"<<","<<reactionTime.toString().c_str()<<std::endl;
+
+                            close(fd);
                             reactionTime.clear();
                             state = STATE_WAIT;
-                                                  
-                            
+
+
                             break;
                         }
                         if (bLeft==1)
                         {
-                            int i = read(fd, button, sizeof(button));                           
+                            int i = read(fd, button, sizeof(button));
                             reactionTime.addDouble(rt);
                             yDebug("Reaction Time is %lf ", rt);
-                            yDebug("reaction time Bottle: %s",reactionTime.toString().c_str() ); 
-                            yDebug("MOUSE left");                          
+                            yDebug("reaction time Bottle: %s",reactionTime.toString().c_str() );
+                            yDebug("MOUSE left");
                             actionDone=false;
                             tokens.clear();
-                            
-                            t=yarp::os::Time::now();   
-                            t1=t2=t3=t;                            
-                            bLeft=0;  
-                            if (tokens[3].compare("T")==0 &&  group==1)                     
-                            results << participantNumber.c_str() << ", "<< ConditionId<<","<<tokens[0] << ", " << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"right"<<","<<group<<","<<"left"<<","<<reactionTime.toString().c_str()<<std::endl;                  
-                            
-                            else if (tokens[3].compare("T")==0 &&  group==2)  
-                            results << participantNumber.c_str() << ", "<< ConditionId<<","<<tokens[0] << ", " << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"left"<<","<<group<<","<<"left"<<","<<reactionTime.toString().c_str()<<std::endl;                  
-                           
-                            else if (tokens[3].compare("V")==0 &&  group==1)  
-                            results << participantNumber.c_str() << ", "<< ConditionId<<","<<tokens[0] << ", " << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"left"<<","<<group<<","<<"left"<<","<<reactionTime.toString().c_str()<<std::endl;                  
-                         
+
+                            t=yarp::os::Time::now();
+                            t1=t2=t3=t;
+                            bLeft=0;
+                            if (tokens[3].compare("T")==0 &&  group==1)
+                            results << participantNumber.c_str() << ", "<< ConditionId<<","<<tokens[0] << ", " << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"right"<<","<<group<<","<<"left"<<","<<reactionTime.toString().c_str()<<std::endl;
+
+                            else if (tokens[3].compare("T")==0 &&  group==2)
+                            results << participantNumber.c_str() << ", "<< ConditionId<<","<<tokens[0] << ", " << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"left"<<","<<group<<","<<"left"<<","<<reactionTime.toString().c_str()<<std::endl;
+
+                            else if (tokens[3].compare("V")==0 &&  group==1)
+                            results << participantNumber.c_str() << ", "<< ConditionId<<","<<tokens[0] << ", " << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"left"<<","<<group<<","<<"left"<<","<<reactionTime.toString().c_str()<<std::endl;
+
                             else if (tokens[3].compare("V")==0 &&  group==2)
-                            results << participantNumber.c_str() << ", "<< ConditionId<<","<<tokens[0] << ", " << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"right"<<","<<group<<","<<"left"<<","<<reactionTime.toString().c_str()<<std::endl;                  
-                                  
+                            results << participantNumber.c_str() << ", "<< ConditionId<<","<<tokens[0] << ", " << tokens[1] << ", " <<tokens[2]<<", "<<tokens[3]<< ", " <<"right"<<","<<group<<","<<"left"<<","<<reactionTime.toString().c_str()<<std::endl;
+
 
                             close(fd);
                             reactionTime.clear();
-                            state = STATE_WAIT;                   
+                            state = STATE_WAIT;
 
 
                             break;
-                        }          
-                   
+                        }
+
                     //fflush(stdout);
-                    
-                    }     
-            
+
+                    }
+
         }
-        
+
         if ( state == STATE_WAIT)
         {
 
 
             yDebug("IN STATE WAIT");
             // every forty trials break until the particpant presses the middle mouse button
-            if ( ConditionId  % 10 == 0 ) 
-	    	
-		
+            if ( ConditionId  % 10 == 0 )
+
+
             {
 		yDebug("in user repsonse");
-	        //mouse event         
-	        if ((fd = open(MOUSEFILE, O_RDONLY)) == -1) 
+	        //mouse event
+	        if ((fd = open(MOUSEFILE, O_RDONLY)) == -1)
 	        {
 	            yDebug("Cannot access mouse device");
 	            exit(EXIT_FAILURE);
-	        }  
+	        }
 
               	 while(read(fd, button, sizeof(button))!=-1)
-                {  
-                    
-                    	
-                        yDebug("Pressed %d", button[0]);                
-                        bLeft = button[0] & 0x1;     
+                {
+
+
+                        yDebug("Pressed %d", button[0]);
+                        bLeft = button[0] & 0x1;
                         bRight = button[0] & 0x2;
  			bMiddle = button[0] & 0x4;
 
@@ -756,33 +772,33 @@ public:
                          yDebug("x=%d, y=%d, left=%d, middle=%d, right=%d\n", x, y, bLeft, middle, bRight);
 
                    	 if (bMiddle==4)
-                   	 {   
+                   	 {
                             int i=read(fd, button, sizeof(button));
                             double diff = (yarp::os::Time::now()-t5);
                             yDebug("x=%d, y=%d, left=%d, middle=%d, right=%d\n", x, y, bLeft, middle, bRight);
-                            
-                            yDebug("MOUSE right"); 
 
-                            
-                            
-                            t=yarp::os::Time::now();                     
-                            t1=t2=t3=t;  
-                            bMiddle=0; 
+                            yDebug("MOUSE right");
+
+
+
+                            t=yarp::os::Time::now();
+                            t1=t2=t3=t;
+                            bMiddle=0;
 		            close(fd);
                             state =STATE_INITIAL;
-                            break;                     
-                          } 
+                            break;
+                          }
                   }
 	   }
            else
            {
-                t=yarp::os::Time::now(); 
-                t1=t2=t3=t;  
+                t=yarp::os::Time::now();
+                t1=t2=t3=t;
                 state = STATE_INITIAL;
 
             }
 
-        }   
+        }
 
     }
     /********************************************************/
@@ -796,13 +812,13 @@ public:
         clientTorso.close();
         faceEmotion.interrupt();
         faceEmotion.close();
-        results.close();   
+        results.close();
     }
-    
+
     /********************************************************/
     void getUserEyes()
     {
-        
+
     }
 
     /********************************************************/
@@ -832,8 +848,8 @@ public:
     /********************************************************/
     void printStatus(yarp::sig::Vector &vec)
     {
-        if (t-t1>=PRINT_STATUS_PER)
-        {
+        //if (t-t1>=PRINT_STATUS_PER)
+        //{
             // we get the current fixation point in the
             // operational space
             yarp::sig::Vector x;
@@ -845,8 +861,8 @@ public:
             yInfo("norm(fp-x) [m] = %g\n",  norm(vec-x));
             yInfo("---------\n\n");
 
-            t1=t;
-        }
+            //t1=t;
+        //}
     }
 };
 
@@ -856,27 +872,27 @@ class CtrlModule: public yarp::os::RFModule
 protected:
     CtrlThread *thr;
     friend class                thr;
-    
+
     ProcessLandmarks           *processLandmarks;
     friend class                processLandmarks;
-    
+
 public:
     virtual bool configure(yarp::os::ResourceFinder &rf)
     {
         yarp::os::Time::turboBoost();
-        
+
         if (!rf.check("name"))
             return false;
-        
+
         std::string moduleName = rf.check("name", yarp::os::Value("posner-manager"), "module name (string)").asString();
-    
+
         setName(moduleName.c_str());
 
         processLandmarks = new ProcessLandmarks( moduleName );
         processLandmarks->open();
-        
+
         thr=new CtrlThread(CTRL_THREAD_PER, *processLandmarks, rf);
-        
+
         if (!thr->start())
         {
             delete thr;
@@ -885,10 +901,10 @@ public:
             delete processLandmarks;
             return false;
         }
-        
+
         return true;
     }
-    
+
     /********************************************************/
     virtual bool close()
     {
@@ -898,13 +914,13 @@ public:
         processLandmarks->interrupt();
         processLandmarks->close();
         delete processLandmarks;
-        
+
         return true;
     }
 
     /********************************************************/
     virtual double getPeriod()    { return 1.0;  }
-    
+
     /********************************************************/
     virtual bool   updateModule() { return true; }
 };
@@ -922,12 +938,12 @@ int main(int argc, char *argv[])
     CtrlModule mod;
 
     yarp::os::ResourceFinder rf;
-    
+
     rf.setVerbose();
     rf.configure(argc,argv);
     rf.setDefaultContext("posner-manager");
     rf.setDefaultConfigFile("config.ini");
     rf.configure(argc, argv);
-    
+
     return mod.runModule(rf);
 }

@@ -3,33 +3,29 @@
 
     <module>
         <name>posner-manager</name>
-        <node>localhost</node>
+        <node>s4hri</node>
     </module>
     <module>
         <name>faceLandmarks</name>
-        <node>localhost</node>
+        <node>s4hri</node>
     </module>
     <module>
         <name>screen-handler</name>
-        <node>localhost</node>
-    </module>
-    <module>
-        <name>iCubBlinker</name>
-        <node>localhost</node>
+        <node>s4hri</node>
     </module>
     <module>
         <name>yarpview</name>
-        <node>localhost</node>
+        <node>icubsrv</node>
         <parameters>--name /faces --x 0 --y 0 --RefreshTime 33 </parameters>
     </module>
     <module>
         <name>yarpview</name>
-        <node>localhost</node>
+        <node>s4hri</node>
         <parameters>--name /screenLeft --RefreshTime 33 </parameters>
     </module>
     <module>
         <name>yarpview</name>
-        <node>localhost</node>
+        <node>s4hri</node>
         <parameters>--name /screenRight --RefreshTime 33 </parameters>
     </module>
 
