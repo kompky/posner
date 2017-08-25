@@ -21,12 +21,17 @@
     <module>
         <name>yarpview</name>
         <node>s4hri</node>
-        <parameters>--name /screenLeft --RefreshTime 33 </parameters>
+        <parameters>--name /screenLeft --x 0 --y 0 --w 1920 --h 1200 --compact --minimal </parameters>
     </module>
     <module>
         <name>yarpview</name>
         <node>s4hri</node>
-        <parameters>--name /screenRight --RefreshTime 33 </parameters>
+        <parameters>--name /screenRight --x 1921 --y 0 --w 1920 --h 1200 --compact --minimal </parameters>
+    </module>
+    <module>
+        <name>iKinGazeCtrl</name>
+        <node>icubsrv</node>
+        <parameters>--from iKinposner.ini --imu::mode off --eye_tilt::min -5 --eye_tilt::max 5</parameters>
     </module>
 
     <connection>
